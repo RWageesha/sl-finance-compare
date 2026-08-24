@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SL Finance Compare</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --border: #e2e2e6;
+    --text: #1c1c1f;
+    --muted: #6b6b74;
+    --accent: #2f6fed;
+    --header-bg: #17181c;
+    --header-text: #f2f2f4;
+    --row-alt: #fafafb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121214;
+      --panel: #1b1c1f;
+      --border: #303136;
+      --text: #eceef0;
+      --muted: #9a9aa2;
+      --accent: #6c9bff;
+      --header-bg: #0c0d0f;
+      --header-text: #eceef0;
+      --row-alt: #202126;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 1.5rem 1.5rem 1.25rem;
+  }
+  header h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+  header p {
+    margin: 0;
+    color: #b6b7bf;
+    font-size: 0.9rem;
+  }
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .toolbar label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  select {
+    font: inherit;
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+  }
+  .status {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    min-width: 640px;
+  }
+  th, td {
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th {
+    cursor: pointer;
+    user-select: none;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  th:hover { color: var(--text); }
+  th.sorted::after { content: " " attr(data-arrow); }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  td.rate { font-weight: 600; text-align: right; }
+  td.tenure { text-align: right; }
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .badge-normal   { background: #e6f0ff; color: #1a4fb4; }
+  .badge-senior   { background: #fdeedd; color: #a35a10; }
+  .badge-special  { background: #ecebff; color: #4a3fd6; }
+  .badge-sathkara { background: #fde8ef; color: #b3245c; }
+  .badge-digital  { background: #e4f8ef; color: #157a4d; }
+  @media (prefers-color-scheme: dark) {
+    .badge-normal   { background: #17335f; color: #a8c6ff; }
+    .badge-senior   { background: #4a331a; color: #ffcf9e; }
+    .badge-special  { background: #2c2867; color: #cac6ff; }
+    .badge-sathkara { background: #5b1836; color: #ffb3cf; }
+    .badge-digital  { background: #103a26; color: #96f0c4; }
+  }
+  .empty, .error {
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted);
+  }
+  .error { color: #d24545; }
+  footer {
+    max-width: 960px;
+    margin: 1rem auto 2rem;
+    padding: 0 1.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SL Finance Compare</h1>
+  <p>Fixed Deposit interest rates across Sri Lankan banks</p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <label>
+      Bank
+      <select id="bankFilter">
+        <option value="">All banks</option>
+      </select>
+    </label>
+    <label>
+      Rate type
+      <select id="typeFilter">
+        <option value="">All types</option>
+      </select>
+    </label>
+    <span class="status" id="status">Loading…</span>
+  </div>
+
+  <div class="table-wrap">
+    <table id="ratesTable">
+      <thead>
+        <tr>
+          <th data-key="bank_name">Bank</th>
+          <th data-key="tenure_months">Tenure</th>
+          <th data-key="rate_type">Type</th>
+          <th data-key="interest_rate">Rate</th>
+          <th data-key="scraped_at">Last updated</th>
+        </tr>
+      </thead>
+      <tbody id="ratesBody">
+        <tr><td colspan="5" class="empty">Loading data…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer>
+  Data source: <code>/api/v1/fixed-deposits</code>. Rates are as published by each
+  bank at last scrape time and may not reflect current promotional offers.
+</footer>
+
+<script>
+(function () {
+  var API_URL = "/api/v1/fixed-deposits";
+  var allRows = [];
+  var sortKey = "interest_rate";
+  var sortDir = -1; // -1 desc, 1 asc
+
+  var statusEl = document.getElementById("status");
+  var bodyEl = document.getElementById("ratesBody");
+  var bankFilterEl = document.getElementById("bankFilter");
+  var typeFilterEl = document.getElementById("typeFilter");
+
+  function fmtDate(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+  }
+
+  function fmtTenure(months) {
+    if (months % 12 === 0 && months >= 12) {
+      var years = months / 12;
+      return years + (years === 1 ? " year" : " years");
+    }
+    return months + (months === 1 ? " month" : " months");
+  }
+
+  function uniqueSorted(values) {
+    var seen = {};
+    var out = [];
+    values.forEach(function (v) {
+      if (!seen[v]) { seen[v] = true; out.push(v); }
+    });
+    out.sort();
+    return out;
+  }
+
+  function populateFilters(rows) {
+    var banks = uniqueSorted(rows.map(function (r) { return r.bank_name; }));
+    var types = uniqueSorted(rows.map(function (r) { return r.rate_type; }));
+
+    banks.forEach(function (b) {
+      var opt = document.createElement("option");
+      opt.value = b;
+      opt.textContent = b;
+      bankFilterEl.appendChild(opt);
+    });
+    types.forEach(function (t) {
+      var opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+      typeFilterEl.appendChild(opt);
+    });
+  }
+
+  function applyFiltersAndSort() {
+    var bank = bankFilterEl.value;
+    var type = typeFilterEl.value;
+
+    var rows = allRows.filter(function (r) {
+      return (!bank || r.bank_name === bank) && (!type || r.rate_type === type);
+    });
+
+    rows.sort(function (a, b) {
+      var av = a[sortKey], bv = b[sortKey];
+      if (typeof av === "string") av = av.toLowerCase();
+      if (typeof bv === "string") bv = bv.toLowerCase();
+      if (av < bv) return -1 * sortDir;
+      if (av > bv) return 1 * sortDir;
+      return 0;
+    });
+
+    render(rows);
+  }
+
+  function render(rows) {
+    if (rows.length === 0) {
+      bodyEl.innerHTML = '<tr><td colspan="5" class="empty">No rates match the current filters.</td></tr>';
+      return;
+    }
+
+    bodyEl.innerHTML = rows.map(function (r) {
+      return "<tr>" +
+        "<td>" + escapeHtml(r.bank_name) + "</td>" +
+        '<td class="tenure">' + fmtTenure(r.tenure_months) + "</td>" +
+        '<td><span class="badge badge-' + escapeHtml(r.rate_type) + '">' + escapeHtml(r.rate_type) + "</span></td>" +
+        '<td class="rate">' + r.interest_rate.toFixed(2) + "%</td>" +
+        "<td>" + fmtDate(r.scraped_at) + "</td>" +
+        "</tr>";
+    }).join("");
+  }
+
+  function escapeHtml(s) {
+    var div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function updateSortIndicators() {
+    document.querySelectorAll("th[data-key]").forEach(function (th) {
+      th.classList.remove("sorted");
+      th.removeAttribute("data-arrow");
+      if (th.getAttribute("data-key") === sortKey) {
+        th.classList.add("sorted");
+        th.setAttribute("data-arrow", sortDir === 1 ? "▲" : "▼");
+      }
+    });
+  }
+
+  document.querySelectorAll("th[data-key]").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var key = th.getAttribute("data-key");
+      if (sortKey === key) {
+        sortDir *= -1;
+      } else {
+        sortKey = key;
+        sortDir = key === "interest_rate" ? -1 : 1;
+      }
+      updateSortIndicators();
+      applyFiltersAndSort();
+    });
+  });
+
+  bankFilterEl.addEventListener("change", applyFiltersAndSort);
+  typeFilterEl.addEventListener("change", applyFiltersAndSort);
+
+  fetch(API_URL)
+    .then(function (res) {
+      if (!res.ok) throw new Error("API returned status " + res.status);
+      return res.json();
+    })
+    .then(function (payload) {
+      allRows = payload.data || [];
+      if (allRows.length === 0) {
+        statusEl.textContent = "No data yet — run the scraper first.";
+        bodyEl.innerHTML = '<tr><td colspan="5" class="empty">No fixed deposit rates in the database yet.</td></tr>';
+        return;
+      }
+      populateFilters(allRows);
+      updateSortIndicators();
+      applyFiltersAndSort();
+      statusEl.textContent = allRows.length + " rate" + (allRows.length === 1 ? "" : "s") + " loaded";
+    })
+    .catch(function (err) {
+      statusEl.textContent = "";
+      bodyEl.innerHTML = '<tr><td colspan="5" class="error">Failed to load data: ' + escapeHtml(err.message) +
+        '. Is the API server running (go run ./cmd/api)?</td></tr>';
+    });
+})();
+</script>
+
+</body>
+</html>

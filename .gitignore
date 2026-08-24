@@ -1,0 +1,5 @@
+.env
+*.debug.html
+*.debug.json
+*.log
+/bin/

@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	stdhtml "html"
 	"io"
 	"net/http"
 	"regexp"
@@ -27,6 +28,11 @@ const (
 	BankCode = "BOC"
 
 	ratesURL = "https://www.boc.lk/rates-tariff"
+
+	// RatesTariffURL exposes ratesURL to callers outside this package that
+	// need the source URL for bookkeeping (e.g. scrape_runs data source
+	// labels) without renaming every internal reference above.
+	RatesTariffURL = ratesURL
 
 	// The rates & tariff page bundles many unrelated sections (exchange
 	// rates, loan rates, savings, insurance info, a suspended senior
@@ -188,11 +194,21 @@ func findFixedDepositsTable(doc *goquery.Document) *goquery.Selection {
 // and entities normalized.
 func lastBrSegmentText(cellHTML string) string {
 	parts := brSplitRe.Split(cellHTML, -1)
-	last := parts[len(parts)-1]
-	last = tagStripRe.ReplaceAllString(last, "")
-	last = strings.ReplaceAll(last, "&nbsp;", " ")
-	last = strings.Join(strings.Fields(last), " ")
-	return strings.TrimSpace(last)
+	return cleanBrSegment(parts[len(parts)-1])
+}
+
+// cleanBrSegment strips tags and normalizes whitespace/entities in one
+// <br>-separated segment of a table cell's inner HTML. stdhtml.UnescapeString
+// decodes every HTML entity (not just &nbsp;, which was this function's
+// only special case before — e.g. &#39; in "Teenagers&#39; Savings" was
+// otherwise left as literal text instead of becoming an apostrophe),
+// including turning &nbsp; into a real non-breaking space, which
+// strings.Fields then treats as ordinary whitespace to collapse.
+func cleanBrSegment(segment string) string {
+	s := tagStripRe.ReplaceAllString(segment, "")
+	s = stdhtml.UnescapeString(s)
+	s = strings.Join(strings.Fields(s), " ")
+	return strings.TrimSpace(s)
 }
 
 // Scrape fetches the BOC rates page and parses it into rate records. The

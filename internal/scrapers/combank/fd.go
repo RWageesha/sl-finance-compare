@@ -26,6 +26,20 @@ const (
 
 	ratesURL = "https://www.combank.lk/personal-banking/term-deposits/fixed-deposits"
 
+	// ratesTariffURL is a separate hub page covering Savings and Loan
+	// products (Fixed Deposit rates stay on ratesURL above, which has a
+	// cleaner single table for that specific product).
+	ratesTariffURL = "https://www.combank.lk/rates-tariff"
+
+	// FixedDepositRatesURL exposes ratesURL to callers outside this
+	// package that need the source URL for bookkeeping (e.g. scrape_runs
+	// data source labels) without renaming every internal reference above.
+	FixedDepositRatesURL = ratesURL
+
+	// RatesTariffURL exposes ratesTariffURL the same way, for the
+	// savings/loans scrapers that share that fetch.
+	RatesTariffURL = ratesTariffURL
+
 	// The rate table has three columns beyond tenure: standard nominal
 	// rate, Annual Effective Rate, and a bonus "eFD" rate for customers
 	// who place the deposit through digital banking. Column indices are
@@ -59,6 +73,40 @@ func FetchPage(ctx context.Context) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return nil, fmt.Errorf("combank: unexpected status %d fetching %s: %s", resp.StatusCode, ratesURL, string(body))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("combank: read response body: %w", err)
+	}
+
+	return body, nil
+}
+
+// FetchRatesTariffPage retrieves the raw HTML of ComBank's rates & tariff
+// hub page, which covers Savings Account and Loan products (unlike the
+// Fixed Deposit page above, this one bundles many product tables under a
+// single URL — see the combank savings/loans parsers).
+func FetchRatesTariffPage(ctx context.Context) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ratesTariffURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("combank: build request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("combank: fetch %s: %w", ratesTariffURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("combank: unexpected status %d fetching %s: %s", resp.StatusCode, ratesTariffURL, string(body))
 	}
 
 	body, err := io.ReadAll(resp.Body)

@@ -123,18 +123,47 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.02em;
+    /* Fallback for any category code without a specific rule below, so a
+       new taxonomy code never renders unstyled. */
+    background: var(--border);
+    color: var(--text);
   }
-  .badge-normal   { background: #e6f0ff; color: #1a4fb4; }
-  .badge-senior   { background: #fdeedd; color: #a35a10; }
-  .badge-special  { background: #ecebff; color: #4a3fd6; }
-  .badge-sathkara { background: #fde8ef; color: #b3245c; }
-  .badge-digital  { background: #e4f8ef; color: #157a4d; }
+  /* Fixed deposit categories */
+  .badge-standard_fd        { background: #e6f0ff; color: #1a4fb4; }
+  .badge-senior_citizen_fd  { background: #fdeedd; color: #a35a10; }
+  .badge-special_fd         { background: #ecebff; color: #4a3fd6; }
+  .badge-sathkara_fd        { background: #fde8ef; color: #b3245c; }
+  .badge-digital_fd         { background: #e4f8ef; color: #157a4d; }
+  /* Savings categories */
+  .badge-standard_savings   { background: #e0f7fa; color: #00707a; }
+  .badge-senior_savings     { background: #fff4d6; color: #8a6100; }
+  .badge-teen_savings       { background: #e3f2fd; color: #0d5f9e; }
+  .badge-womens_savings     { background: #fde4f0; color: #a01764; }
+  .badge-minor_savings      { background: #f1f8e0; color: #5c7a10; }
+  /* Loan categories */
+  .badge-housing_loan       { background: #e8e6fd; color: #3f2fb0; }
+  .badge-personal_loan      { background: #e1f0ff; color: #1660b0; }
+  .badge-education_loan     { background: #f2e6fd; color: #6a1fb0; }
+  .badge-gold_loan          { background: #fff6da; color: #8a6a00; }
+  .badge-lease              { background: #eef1f5; color: #3d4a5c; }
+  .badge-pensioner_loan     { background: #fbe4e6; color: #9c1f2e; }
   @media (prefers-color-scheme: dark) {
-    .badge-normal   { background: #17335f; color: #a8c6ff; }
-    .badge-senior   { background: #4a331a; color: #ffcf9e; }
-    .badge-special  { background: #2c2867; color: #cac6ff; }
-    .badge-sathkara { background: #5b1836; color: #ffb3cf; }
-    .badge-digital  { background: #103a26; color: #96f0c4; }
+    .badge-standard_fd        { background: #17335f; color: #a8c6ff; }
+    .badge-senior_citizen_fd  { background: #4a331a; color: #ffcf9e; }
+    .badge-special_fd         { background: #2c2867; color: #cac6ff; }
+    .badge-sathkara_fd        { background: #5b1836; color: #ffb3cf; }
+    .badge-digital_fd         { background: #103a26; color: #96f0c4; }
+    .badge-standard_savings   { background: #0d3a3e; color: #7fe0eb; }
+    .badge-senior_savings     { background: #4a3a0a; color: #ffd980; }
+    .badge-teen_savings       { background: #123a5c; color: #8fcbff; }
+    .badge-womens_savings     { background: #4a1030; color: #ff9ecb; }
+    .badge-minor_savings      { background: #2e3a10; color: #c8e88a; }
+    .badge-housing_loan       { background: #241a5c; color: #bcb2ff; }
+    .badge-personal_loan      { background: #0f2e57; color: #9cc6ff; }
+    .badge-education_loan     { background: #341a57; color: #d3aeff; }
+    .badge-gold_loan          { background: #453400; color: #ffd76b; }
+    .badge-lease              { background: #232a33; color: #c2cdd9; }
+    .badge-pensioner_loan     { background: #4a1116; color: #ff9aa3; }
   }
   .empty, .error {
     padding: 2rem;
@@ -142,6 +171,28 @@
     color: var(--muted);
   }
   .error { color: #d24545; }
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .tab-btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
   footer {
     max-width: 960px;
     margin: 1rem auto 2rem;
@@ -155,10 +206,12 @@
 
 <header>
   <h1>SL Finance Compare</h1>
-  <p>Fixed Deposit interest rates across Sri Lankan banks</p>
+  <p>Fixed Deposit, Savings, and Loan rates across Sri Lankan banks</p>
 </header>
 
 <main>
+  <div class="tabs" id="tabs"></div>
+
   <div class="toolbar">
     <label>
       Bank
@@ -167,9 +220,9 @@
       </select>
     </label>
     <label>
-      Rate type
+      <span id="typeFilterLabel">Rate type</span>
       <select id="typeFilter">
-        <option value="">All types</option>
+        <option value="">All</option>
       </select>
     </label>
     <span class="status" id="status">Loading…</span>
@@ -178,37 +231,92 @@
   <div class="table-wrap">
     <table id="ratesTable">
       <thead>
-        <tr>
-          <th data-key="bank_name">Bank</th>
-          <th data-key="tenure_months">Tenure</th>
-          <th data-key="rate_type">Type</th>
-          <th data-key="interest_rate">Rate</th>
-          <th data-key="scraped_at">Last updated</th>
-        </tr>
+        <tr id="ratesHeadRow"></tr>
       </thead>
       <tbody id="ratesBody">
-        <tr><td colspan="5" class="empty">Loading data…</td></tr>
+        <tr><td class="empty">Loading data…</td></tr>
       </tbody>
     </table>
   </div>
 </main>
 
-<footer>
-  Data source: <code>/api/v1/fixed-deposits</code>. Rates are as published by each
-  bank at last scrape time and may not reflect current promotional offers.
-</footer>
+<footer id="footer"></footer>
 
 <script>
 (function () {
-  var API_URL = "/api/v1/fixed-deposits";
+  // Each tab describes its own API endpoint, table columns, and which
+  // column is the secondary filter (besides bank, which every tab has).
+  // "rate" columns are right-aligned and shown as N.NN%; "tenure" columns
+  // convert whole months to a "N year(s)/month(s)" label; "date" columns
+  // are formatted with fmtDate; "badge" columns get the existing FD
+  // rate_type pill styling; everything else renders as plain text.
+  var TABS = [
+    {
+      id: "fd",
+      label: "Fixed Deposits",
+      apiUrl: "/api/v1/fixed-deposits",
+      emptyMessage: "No fixed deposit rates in the database yet.",
+      filterKey: "category_code",
+      filterLabel: "Rate type",
+      defaultSortKey: "interest_rate",
+      columns: [
+        { key: "bank_name", label: "Bank", type: "text" },
+        { key: "tenure_value", label: "Tenure", type: "tenure" },
+        { key: "category_code", label: "Type", type: "badge" },
+        { key: "interest_rate", label: "Rate", type: "rate" },
+        { key: "scraped_at", label: "Last updated", type: "date" }
+      ]
+    },
+    {
+      id: "savings",
+      label: "Savings",
+      apiUrl: "/api/v1/savings-rates",
+      emptyMessage: "No savings rates in the database yet.",
+      filterKey: "category_code",
+      filterLabel: "Category",
+      defaultSortKey: "interest_rate",
+      columns: [
+        { key: "bank_name", label: "Bank", type: "text" },
+        { key: "category_code", label: "Category", type: "badge" },
+        { key: "product_name", label: "Account", type: "text" },
+        { key: "tenure_label", label: "Balance tier", type: "text" },
+        { key: "interest_rate", label: "Rate", type: "rate" },
+        { key: "scraped_at", label: "Last updated", type: "date" }
+      ]
+    },
+    {
+      id: "loans",
+      label: "Loans",
+      apiUrl: "/api/v1/loan-rates",
+      emptyMessage: "No loan rates in the database yet.",
+      filterKey: "category_code",
+      filterLabel: "Category",
+      defaultSortKey: "interest_rate",
+      columns: [
+        { key: "bank_name", label: "Bank", type: "text" },
+        { key: "category_code", label: "Category", type: "badge" },
+        { key: "product_name", label: "Product", type: "text" },
+        { key: "tenure_label", label: "Tenure", type: "text" },
+        { key: "rate_label", label: "Rate label", type: "text" },
+        { key: "interest_rate", label: "Rate", type: "rate" },
+        { key: "scraped_at", label: "Last updated", type: "date" }
+      ]
+    }
+  ];
+
+  var activeTab = TABS[0];
   var allRows = [];
-  var sortKey = "interest_rate";
+  var sortKey = activeTab.defaultSortKey;
   var sortDir = -1; // -1 desc, 1 asc
 
+  var tabsEl = document.getElementById("tabs");
   var statusEl = document.getElementById("status");
+  var headRowEl = document.getElementById("ratesHeadRow");
   var bodyEl = document.getElementById("ratesBody");
+  var footerEl = document.getElementById("footer");
   var bankFilterEl = document.getElementById("bankFilter");
   var typeFilterEl = document.getElementById("typeFilter");
+  var typeFilterLabelEl = document.getElementById("typeFilterLabel");
 
   function fmtDate(iso) {
     var d = new Date(iso);
@@ -231,15 +339,60 @@
     var seen = {};
     var out = [];
     values.forEach(function (v) {
-      if (!seen[v]) { seen[v] = true; out.push(v); }
+      if (v && !seen[v]) { seen[v] = true; out.push(v); }
     });
     out.sort();
     return out;
   }
 
+  function escapeHtml(s) {
+    var div = document.createElement("div");
+    div.textContent = s == null ? "" : s;
+    return div.innerHTML;
+  }
+
+  function renderTabs() {
+    tabsEl.innerHTML = "";
+    TABS.forEach(function (tab) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tab-btn" + (tab.id === activeTab.id ? " active" : "");
+      btn.textContent = tab.label;
+      btn.addEventListener("click", function () {
+        if (tab.id === activeTab.id) return;
+        switchTab(tab);
+      });
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  function renderHead() {
+    headRowEl.innerHTML = activeTab.columns.map(function (col) {
+      return '<th data-key="' + col.key + '">' + escapeHtml(col.label) + "</th>";
+    }).join("");
+
+    headRowEl.querySelectorAll("th[data-key]").forEach(function (th) {
+      th.addEventListener("click", function () {
+        var key = th.getAttribute("data-key");
+        if (sortKey === key) {
+          sortDir *= -1;
+        } else {
+          sortKey = key;
+          sortDir = key === "interest_rate" ? -1 : 1;
+        }
+        updateSortIndicators();
+        applyFiltersAndSort();
+      });
+    });
+  }
+
   function populateFilters(rows) {
+    bankFilterEl.innerHTML = '<option value="">All banks</option>';
+    typeFilterLabelEl.textContent = activeTab.filterLabel;
+    typeFilterEl.innerHTML = '<option value="">All</option>';
+
     var banks = uniqueSorted(rows.map(function (r) { return r.bank_name; }));
-    var types = uniqueSorted(rows.map(function (r) { return r.rate_type; }));
+    var types = uniqueSorted(rows.map(function (r) { return r[activeTab.filterKey]; }));
 
     banks.forEach(function (b) {
       var opt = document.createElement("option");
@@ -250,17 +403,27 @@
     types.forEach(function (t) {
       var opt = document.createElement("option");
       opt.value = t;
-      opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+      opt.textContent = formatCategoryLabel(t);
       typeFilterEl.appendChild(opt);
+    });
+  }
+
+  // Category codes are stored as e.g. "SENIOR_CITIZEN_FD" — display them
+  // as "Senior Citizen Fd" rather than the raw underscored code. Filtering
+  // still matches on the raw code (see applyFiltersAndSort).
+  function formatCategoryLabel(code) {
+    return String(code).toLowerCase().replace(/_/g, " ").replace(/\b\w/g, function (c) {
+      return c.toUpperCase();
     });
   }
 
   function applyFiltersAndSort() {
     var bank = bankFilterEl.value;
     var type = typeFilterEl.value;
+    var filterKey = activeTab.filterKey;
 
     var rows = allRows.filter(function (r) {
-      return (!bank || r.bank_name === bank) && (!type || r.rate_type === type);
+      return (!bank || r.bank_name === bank) && (!type || r[filterKey] === type);
     });
 
     rows.sort(function (a, b) {
@@ -275,31 +438,37 @@
     render(rows);
   }
 
+  function renderCell(col, row) {
+    var value = row[col.key];
+    switch (col.type) {
+      case "tenure":
+        return '<td class="tenure">' + fmtTenure(value) + "</td>";
+      case "rate":
+        return '<td class="rate">' + value.toFixed(2) + "%</td>";
+      case "date":
+        return "<td>" + fmtDate(value) + "</td>";
+      case "badge":
+        return '<td><span class="badge badge-' + escapeHtml(String(value).toLowerCase()) + '">' +
+          escapeHtml(formatCategoryLabel(value)) + "</span></td>";
+      default:
+        return "<td>" + escapeHtml(value) + "</td>";
+    }
+  }
+
   function render(rows) {
+    var colCount = activeTab.columns.length;
     if (rows.length === 0) {
-      bodyEl.innerHTML = '<tr><td colspan="5" class="empty">No rates match the current filters.</td></tr>';
+      bodyEl.innerHTML = '<tr><td colspan="' + colCount + '" class="empty">No rates match the current filters.</td></tr>';
       return;
     }
 
     bodyEl.innerHTML = rows.map(function (r) {
-      return "<tr>" +
-        "<td>" + escapeHtml(r.bank_name) + "</td>" +
-        '<td class="tenure">' + fmtTenure(r.tenure_months) + "</td>" +
-        '<td><span class="badge badge-' + escapeHtml(r.rate_type) + '">' + escapeHtml(r.rate_type) + "</span></td>" +
-        '<td class="rate">' + r.interest_rate.toFixed(2) + "%</td>" +
-        "<td>" + fmtDate(r.scraped_at) + "</td>" +
-        "</tr>";
+      return "<tr>" + activeTab.columns.map(function (col) { return renderCell(col, r); }).join("") + "</tr>";
     }).join("");
   }
 
-  function escapeHtml(s) {
-    var div = document.createElement("div");
-    div.textContent = s;
-    return div.innerHTML;
-  }
-
   function updateSortIndicators() {
-    document.querySelectorAll("th[data-key]").forEach(function (th) {
+    headRowEl.querySelectorAll("th[data-key]").forEach(function (th) {
       th.classList.remove("sorted");
       th.removeAttribute("data-arrow");
       if (th.getAttribute("data-key") === sortKey) {
@@ -309,45 +478,58 @@
     });
   }
 
-  document.querySelectorAll("th[data-key]").forEach(function (th) {
-    th.addEventListener("click", function () {
-      var key = th.getAttribute("data-key");
-      if (sortKey === key) {
-        sortDir *= -1;
-      } else {
-        sortKey = key;
-        sortDir = key === "interest_rate" ? -1 : 1;
-      }
-      updateSortIndicators();
-      applyFiltersAndSort();
-    });
-  });
+  function renderFooter() {
+    footerEl.innerHTML = "Data source: <code>" + activeTab.apiUrl + "</code>. Rates are as published by each " +
+      "bank at last scrape time and may not reflect current promotional offers.";
+  }
+
+  function switchTab(tab) {
+    activeTab = tab;
+    sortKey = tab.defaultSortKey;
+    sortDir = -1;
+    renderTabs();
+    renderHead();
+    renderFooter();
+    loadData();
+  }
 
   bankFilterEl.addEventListener("change", applyFiltersAndSort);
   typeFilterEl.addEventListener("change", applyFiltersAndSort);
 
-  fetch(API_URL)
-    .then(function (res) {
-      if (!res.ok) throw new Error("API returned status " + res.status);
-      return res.json();
-    })
-    .then(function (payload) {
-      allRows = payload.data || [];
-      if (allRows.length === 0) {
-        statusEl.textContent = "No data yet — run the scraper first.";
-        bodyEl.innerHTML = '<tr><td colspan="5" class="empty">No fixed deposit rates in the database yet.</td></tr>';
-        return;
-      }
-      populateFilters(allRows);
-      updateSortIndicators();
-      applyFiltersAndSort();
-      statusEl.textContent = allRows.length + " rate" + (allRows.length === 1 ? "" : "s") + " loaded";
-    })
-    .catch(function (err) {
-      statusEl.textContent = "";
-      bodyEl.innerHTML = '<tr><td colspan="5" class="error">Failed to load data: ' + escapeHtml(err.message) +
-        '. Is the API server running (go run ./cmd/api)?</td></tr>';
-    });
+  function loadData() {
+    allRows = [];
+    statusEl.textContent = "Loading…";
+    bodyEl.innerHTML = '<tr><td colspan="' + activeTab.columns.length + '" class="empty">Loading data…</td></tr>';
+
+    fetch(activeTab.apiUrl)
+      .then(function (res) {
+        if (!res.ok) throw new Error("API returned status " + res.status);
+        return res.json();
+      })
+      .then(function (payload) {
+        allRows = payload.data || [];
+        if (allRows.length === 0) {
+          statusEl.textContent = "No data yet — run the scraper first.";
+          bodyEl.innerHTML = '<tr><td colspan="' + activeTab.columns.length + '" class="empty">' +
+            escapeHtml(activeTab.emptyMessage) + "</td></tr>";
+          return;
+        }
+        populateFilters(allRows);
+        updateSortIndicators();
+        applyFiltersAndSort();
+        statusEl.textContent = allRows.length + " rate" + (allRows.length === 1 ? "" : "s") + " loaded";
+      })
+      .catch(function (err) {
+        statusEl.textContent = "";
+        bodyEl.innerHTML = '<tr><td colspan="' + activeTab.columns.length + '" class="error">Failed to load data: ' +
+          escapeHtml(err.message) + '. Is the API server running (go run ./cmd/api)?</td></tr>';
+      });
+  }
+
+  renderTabs();
+  renderHead();
+  renderFooter();
+  loadData();
 })();
 </script>
 

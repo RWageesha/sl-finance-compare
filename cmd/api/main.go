@@ -54,6 +54,8 @@ func run() error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/fixed-deposits", handleFixedDeposits(database))
+	mux.HandleFunc("GET /api/v1/savings-rates", handleSavingsRates(database))
+	mux.HandleFunc("GET /api/v1/loan-rates", handleLoanRates(database))
 	mux.HandleFunc("GET /healthz", handleHealthz)
 	mux.Handle("/", http.FileServer(http.Dir("web")))
 
@@ -89,14 +91,29 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleFixedDeposits(database *db.DB) http.HandlerFunc {
+	return handleRatesForGroup(database, "FIXED_DEPOSIT", "fixed deposit rates")
+}
+
+func handleSavingsRates(database *db.DB) http.HandlerFunc {
+	return handleRatesForGroup(database, "SAVINGS", "savings rates")
+}
+
+func handleLoanRates(database *db.DB) http.HandlerFunc {
+	return handleRatesForGroup(database, "LOAN", "loan rates")
+}
+
+// handleRatesForGroup returns a handler serving the latest rates under a
+// top-level category group ("FIXED_DEPOSIT", "SAVINGS", or "LOAN") — the
+// three product-type endpoints differ only in which group they query.
+func handleRatesForGroup(database *db.DB, categoryGroup, errLabel string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 
-		rates, err := database.GetLatestFixedDeposits(ctx)
+		rates, err := database.GetLatestRates(ctx, categoryGroup)
 		if err != nil {
-			log.Printf("api: get latest fixed deposits: %v", err)
-			writeJSONError(w, http.StatusInternalServerError, "failed to load fixed deposit rates")
+			log.Printf("api: get latest %s: %v", errLabel, err)
+			writeJSONError(w, http.StatusInternalServerError, "failed to load "+errLabel)
 			return
 		}
 

@@ -113,7 +113,7 @@ func ParseFixedDeposits(jsonBody []byte) ([]models.FixedDepositRate, error) {
 		return nil, fmt.Errorf("hnb: decode api response: %w", err)
 	}
 
-	fdSub := findFixedDepositsSubCategory(resp)
+	fdSub := findSubCategory(resp, fixedDepositsSubCategory)
 	if fdSub == nil {
 		return nil, fmt.Errorf("hnb: %q sub-category not found in api response", fixedDepositsSubCategory)
 	}
@@ -194,11 +194,15 @@ func ParseFixedDeposits(jsonBody []byte) ([]models.FixedDepositRate, error) {
 	return rates, nil
 }
 
-func findFixedDepositsSubCategory(resp apiResponse) *apiSubCategory {
+// findSubCategory searches every category in the response for a
+// sub-category with the given name (case-insensitive), regardless of which
+// top-level category it lives under — HNB's site nests "Fixed Deposits" and
+// the savings sub-categories under the "Savings" category, for instance.
+func findSubCategory(resp apiResponse, name string) *apiSubCategory {
 	for _, cat := range resp.Data {
 		for i := range cat.InterestRateSubCategory {
 			sc := &cat.InterestRateSubCategory[i]
-			if strings.EqualFold(strings.TrimSpace(sc.Name), fixedDepositsSubCategory) {
+			if strings.EqualFold(strings.TrimSpace(sc.Name), name) {
 				return sc
 			}
 		}

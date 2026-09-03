@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -57,7 +59,7 @@ func run() error {
 	mux.HandleFunc("GET /api/v1/savings-rates", handleSavingsRates(database))
 	mux.HandleFunc("GET /api/v1/loan-rates", handleLoanRates(database))
 	mux.HandleFunc("GET /healthz", handleHealthz)
-	mux.Handle("/", http.FileServer(http.Dir("web")))
+	mux.Handle("/", spaFileServer{root: "web", fallback: "200.html"})
 
 	srv := &http.Server{
 		Addr:              ":" + port,
@@ -88,6 +90,64 @@ func run() error {
 
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+// spaFileServer serves prerendered static files from root, falling back to
+// root/fallback (Nitro's generated 200.html SPA shell) for any path
+// http.FileServer would 404 on. Most routes here are fully prerendered
+// (every page nuxt generate's crawler could reach via a link), but some —
+// e.g. FD product-detail pages, whose exact slugs depend on live scraped
+// data that doesn't exist at `nuxt generate` time — have no matching
+// prerendered file. Client-side navigation to those already works (Vue
+// Router handles it once the app is loaded); this covers a fresh, direct,
+// or bookmarked load, so the app shell loads and the client-side router
+// resolves the route correctly instead of a bare 404.
+type spaFileServer struct {
+	root     string
+	fallback string
+}
+
+func (s spaFileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	buf := &bufferedResponse{header: make(http.Header)}
+	http.FileServer(http.Dir(s.root)).ServeHTTP(buf, r)
+
+	if buf.status == http.StatusNotFound {
+		http.ServeFile(w, r, filepath.Join(s.root, s.fallback))
+		return
+	}
+
+	for k, v := range buf.header {
+		w.Header()[k] = v
+	}
+	w.WriteHeader(buf.status)
+	w.Write(buf.body.Bytes()) //nolint:errcheck // best-effort write to an already-buffered response
+}
+
+// bufferedResponse buffers a handler's entire response so ServeHTTP above
+// can inspect the status code before deciding whether to relay it or serve
+// the SPA fallback instead. Fine for a small static site's file sizes;
+// not meant for large payloads.
+type bufferedResponse struct {
+	header      http.Header
+	status      int
+	body        bytes.Buffer
+	wroteHeader bool
+}
+
+func (b *bufferedResponse) Header() http.Header { return b.header }
+
+func (b *bufferedResponse) WriteHeader(status int) {
+	if !b.wroteHeader {
+		b.status = status
+		b.wroteHeader = true
+	}
+}
+
+func (b *bufferedResponse) Write(p []byte) (int, error) {
+	if !b.wroteHeader {
+		b.WriteHeader(http.StatusOK)
+	}
+	return b.body.Write(p)
 }
 
 func handleFixedDeposits(database *db.DB) http.HandlerFunc {

@@ -1,0 +1,258 @@
+"""One-shot pipeline: fetch each configured bank's rates page, parse it,
+normalize the result onto the shared products/product_rates schema, and
+persist it to Postgres. Port of cmd/scraper/main.go.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import logging
+import os
+import sys
+from dataclasses import dataclass
+from typing import Callable
+
+from dotenv import load_dotenv
+
+import normalize
+import validate
+from banks import boc, combank, hnb
+from db import DB, ProductRate, ScrapeRun
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+log = logging.getLogger("scraper")
+
+
+def _normalize_all(rows: list[dict], normalize_fn: Callable[[DB, int, dict], ProductRate], db: DB, bank_id: int, label: str) -> list[ProductRate]:
+    """Runs normalize_fn over every raw scraped row, validates each
+    result, and returns only the rows that passed both steps — logging a
+    warning for anything dropped, same "skip and log" posture the
+    scrapers themselves already use for malformed rows.
+    """
+    out = []
+    for row in rows:
+        try:
+            pr = normalize_fn(db, bank_id, row)
+        except Exception as exc:  # noqa: BLE001 - mirrors Go's "log and skip"
+            log.warning("%s: normalize: %s", label, exc)
+            continue
+        try:
+            validate.rate(pr)
+        except validate.ValidationError as exc:
+            log.warning("%s: %s", label, exc)
+            continue
+        out.append(pr)
+    return out
+
+
+def _run_scrape(db: DB, bank_id: int, label: str, source_url: str, fn: Callable[[], int]) -> Exception | None:
+    """Wraps one scrape attempt with data_sources/scrape_runs bookkeeping:
+    resolves the source row (creating it on first run), then records how
+    the attempt went (row count, status, error) once fn returns. fn does
+    the actual fetch/parse/normalize/insert work and returns how many rows
+    it inserted (raising on total failure).
+    """
+    source_id = db.get_or_create_data_source(bank_id, label, source_url)
+
+    started = dt.datetime.now(dt.timezone.utc)
+    count = 0
+    err: Exception | None = None
+    try:
+        count = fn()
+    except Exception as exc:  # noqa: BLE001 - recorded below, then re-raised to the caller
+        err = exc
+    completed = dt.datetime.now(dt.timezone.utc)
+
+    status = "success"
+    error_message = ""
+    if err is not None:
+        status = "partial" if count > 0 else "failed"
+        error_message = str(err)
+
+    try:
+        db.record_scrape_run(
+            ScrapeRun(
+                source_id=source_id,
+                started_at=started,
+                completed_at=completed,
+                status=status,
+                records_found=count,
+                error_message=error_message,
+            )
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("%s: warning: failed to record scrape run: %s", label, exc)
+
+    return err
+
+
+def _scrape_hnb(db: DB) -> list[Exception]:
+    """Fetches HNB's rates API once and parses the same raw response three
+    ways (fixed deposits, savings accounts, loans) — HNB's API returns all
+    of a bank's published rates in a single response, so fetching it
+    separately per product type would just mean redundant HTTP calls
+    against the same data. Each product type's parse/insert failure is
+    independent: one being fatal doesn't block the others.
+    """
+    log.info("hnb: fetching rates")
+    resp = hnb.fetch_rates_json()
+
+    bank_id = db.get_or_create_bank(hnb.BANK_NAME, hnb.BANK_CODE)
+    errors: list[Exception] = []
+
+    def fd() -> int:
+        rows = hnb.parse_fixed_deposits(resp)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(hnb.BANK_NAME), db, bank_id, "hnb")
+        db.insert_product_rates(product_rates)
+        log.info("hnb: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def savings() -> int:
+        rows = hnb.parse_savings_accounts(resp)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "hnb")
+        db.insert_product_rates(product_rates)
+        log.info("hnb: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def loans() -> int:
+        rows = hnb.parse_loans(resp)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "hnb")
+        db.insert_product_rates(product_rates)
+        log.info("hnb: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, source_url, fn in (
+        ("hnb-fixed-deposits", hnb.RATES_API_URL, fd),
+        ("hnb-savings", hnb.RATES_API_URL, savings),
+        ("hnb-loans", hnb.RATES_API_URL, loans),
+    ):
+        err = _run_scrape(db, bank_id, label, source_url, fn)
+        if err is not None:
+            log.warning("hnb: %s: %s", label, err)
+            errors.append(err)
+
+    return errors
+
+
+def _scrape_combank(db: DB) -> list[Exception]:
+    """ComBank's Fixed Deposit rates live on their own dedicated page;
+    Savings and Loans share a separate rates-tariff hub page — two fetches
+    total, three parses.
+    """
+    errors: list[Exception] = []
+    bank_id = db.get_or_create_bank(combank.BANK_NAME, combank.BANK_CODE)
+
+    log.info("combank: fetching fixed deposit rates")
+
+    def fd() -> int:
+        html = combank.fetch_page()
+        rows = combank.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(combank.BANK_NAME), db, bank_id, "combank")
+        db.insert_product_rates(product_rates)
+        log.info("combank: inserted %d fixed deposit rate(s) for %s", len(product_rates), combank.BANK_NAME)
+        return len(product_rates)
+
+    err = _run_scrape(db, bank_id, "combank-fixed-deposits", combank.RATES_URL, fd)
+    if err is not None:
+        log.warning("combank: fixed-deposits: %s", err)
+        errors.append(err)
+
+    log.info("combank: fetching rates-tariff page")
+    tariff_html = combank.fetch_rates_tariff_page()
+
+    def savings() -> int:
+        rows = combank.parse_savings(tariff_html)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "combank")
+        db.insert_product_rates(product_rates)
+        log.info("combank: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def loans() -> int:
+        rows = combank.parse_loans(tariff_html)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "combank")
+        db.insert_product_rates(product_rates)
+        log.info("combank: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, fn in (("combank-savings", savings), ("combank-loans", loans)):
+        err = _run_scrape(db, bank_id, label, combank.RATES_TARIFF_URL, fn)
+        if err is not None:
+            log.warning("combank: %s: %s", label, err)
+            errors.append(err)
+
+    return errors
+
+
+def _scrape_boc(db: DB) -> list[Exception]:
+    """Fetches BOC's rates & tariff page once and parses it three ways
+    (fixed deposits, savings, loans) — same fetch-once-parse-many
+    structure as HNB, since BOC publishes all three product types on the
+    one page.
+    """
+    log.info("boc: fetching rates-tariff page")
+    html = boc.fetch_page()
+
+    bank_id = db.get_or_create_bank(boc.BANK_NAME, boc.BANK_CODE)
+    errors: list[Exception] = []
+
+    def fd() -> int:
+        rows = boc.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(boc.BANK_NAME), db, bank_id, "boc")
+        db.insert_product_rates(product_rates)
+        log.info("boc: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def savings() -> int:
+        rows = boc.parse_savings(html)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "boc")
+        db.insert_product_rates(product_rates)
+        log.info("boc: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def loans() -> int:
+        rows = boc.parse_loans(html)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "boc")
+        db.insert_product_rates(product_rates)
+        log.info("boc: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, fn in (("boc-fixed-deposits", fd), ("boc-savings", savings), ("boc-loans", loans)):
+        err = _run_scrape(db, bank_id, label, boc.RATES_URL, fn)
+        if err is not None:
+            log.warning("boc: %s: %s", label, err)
+            errors.append(err)
+
+    return errors
+
+
+def run() -> list[Exception]:
+    load_dotenv()
+
+    conn_string = os.environ.get("DATABASE_URL")
+    if not conn_string:
+        raise RuntimeError("DATABASE_URL is not set (check your .env file)")
+
+    errors: list[Exception] = []
+    with DB(conn_string) as db:
+        # One bank's site being down or having changed its markup
+        # shouldn't block scraping the others, so run every scraper and
+        # only report failure at the end (still surfacing every individual
+        # error via log).
+        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc):
+            try:
+                errors.extend(scrape_bank(db))
+            except Exception as exc:  # noqa: BLE001 - a bank-level fetch failure (e.g. network down)
+                log.warning("%s: %s", scrape_bank.__name__, exc)
+                errors.append(exc)
+
+    return errors
+
+
+def main() -> None:
+    errors = run()
+    if errors:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

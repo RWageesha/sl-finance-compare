@@ -3,3 +3,6 @@
 *.debug.json
 *.log
 /bin/
+scraper/.venv/
+scraper/__pycache__/
+scraper/**/__pycache__/

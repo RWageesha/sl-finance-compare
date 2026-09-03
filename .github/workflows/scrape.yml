@@ -1,4 +1,4 @@
-name: Scrape Fixed Deposit Rates
+name: Scrape Bank Rates
 
 on:
   schedule:
@@ -12,11 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-python@v5
         with:
-          go-version: "1.25"
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
 
       - name: Run scraper
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: go run ./cmd/scraper
+        working-directory: scraper
+        run: python main.py

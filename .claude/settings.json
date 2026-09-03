@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"GET /rates?tab=loans&category=HOUSING_LOAN -> %{http_code} \\(redirect_url: %{redirect_url}\\)\\\\n\" \"http://localhost:8080/rates?tab=loans&category=HOUSING_LOAN\")"
+    ]
+  }
+}

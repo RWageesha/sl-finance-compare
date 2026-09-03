@@ -1,30 +1,42 @@
 # SL Finance Compare
 
 Scrapes, normalizes, and compares Sri Lankan bank financial product rates.
-Tracks Fixed Deposit rates from Hatton National Bank (HNB), Commercial Bank
-of Ceylon (ComBank), and Bank of Ceylon (BOC), plus Savings Account and Loan
-rates from HNB.
+Tracks Fixed Deposit, Savings Account, and Loan rates from Hatton National
+Bank (HNB), Commercial Bank of Ceylon (ComBank), and Bank of Ceylon (BOC).
+
+**Target stack:** Nuxt.js frontend · Go backend · PostgreSQL · Python for
+data collection. All four now match.
 
 ## Project layout
 
 ```
+frontend/                   Nuxt 3 app — source of truth for the frontend;
+                             see "Frontend (Nuxt.js)" below
+  app/pages/{index,rates}.vue  Homepage and the rate comparison tool
+  app/components/            ProductCard, CompareCard, RecentRatesTable, RatesTable
+  app/composables/useRatesApi.ts  Fetches the Go API's three rate endpoints
+  app/utils/format.ts         fmtDate/fmtTenure/formatCategoryLabel
+
+web/                        Generated static output of `frontend/` (nuxt generate) —
+                             build artifact, never hand-edit; served as-is by cmd/api
+
+scraper/                    Python data collection — see "Running the scraper" below
+  main.py                   Orchestrates every bank/product-type scrape
+  db.py                     Postgres access via psycopg
+  normalize.py              Maps each bank's raw output onto the normalized schema
+  validate.py                Plausibility checks applied before a rate is stored
+  ratetext.py                Shared tenure/rate string parsing
+  banks/{hnb,combank,boc}.py  Per-bank fetch + parse
+
 cmd/api/main.go            REST API (net/http) — GET /api/v1/fixed-deposits,
                             /api/v1/savings-rates, /api/v1/loan-rates; serves web/
-cmd/scraper/main.go        One-shot scraper pipeline runner (all banks/products)
-internal/db                Postgres access via pgx
+internal/db                Postgres access via pgx (Go API side only)
 internal/models            Shared domain types, including the normalized
                             ProductCategory/Product/ProductRate schema
-internal/normalize         Maps each scraper's raw output (FixedDepositRate/
-                            SavingsRate/LoanRate) onto the normalized schema
-internal/validate           Plausibility checks applied before a rate is stored
-internal/scrapers/hnb      HNB scraper (JSON API client) — fixed deposits,
-                            savings accounts, and loans
-internal/scrapers/combank  ComBank Fixed Deposit scraper (HTML/goquery)
-internal/scrapers/boc      BOC Fixed Deposit scraper (HTML/goquery)
-internal/scrapers/ratetext Shared tenure/rate string parsing, used by all scrapers
+internal/scrapers/*        Original Go scrapers — superseded by scraper/, kept
+                            for reference; internal/normalize, internal/validate,
+                            and cmd/scraper/main.go likewise unused now
 migrations                 SQL migrations, applied in filename order
-web/index.html             Static frontend — tabbed, sortable/filterable rate
-                            comparison table (Fixed Deposits / Savings / Loans)
 ```
 
 ### Database schema
@@ -50,7 +62,8 @@ resolving/creating the right category and product rows along the way.
 
 ## Prerequisites
 
-- Go 1.22+
+- Go 1.22+ (API server)
+- Python 3.12+ (data collection)
 - A native PostgreSQL 16 install
 - `psql` (for applying migrations and inspecting the database directly)
 
@@ -94,11 +107,15 @@ resolving/creating the right category and product rows along the way.
 ## Running the scraper
 
 ```sh
-go run ./cmd/scraper
+cd scraper
+python -m venv .venv
+.venv/Scripts/activate        # Windows; use `source .venv/bin/activate` on Linux/macOS
+pip install -r requirements.txt
+python main.py                # reads DATABASE_URL from ../.env
 ```
 
 Runs every configured bank/product scraper in turn, normalizes each result
-onto the shared schema (see `internal/normalize`), and inserts it into
+onto the shared schema (see `normalize.py`), and inserts it into
 `product_rates`. Each run adds new rows (rather than overwriting), so the
 database accumulates a rate history over time, and also records one
 `scrape_runs` row per (bank, product type) attempt for basic operational
@@ -107,63 +124,36 @@ doesn't block the others — each scraper's outcome is logged individually,
 and the process only exits non-zero if at least one failed.
 
 - **HNB**: its rates page is a client-rendered React app with no
-  server-side HTML table, so the scraper talks directly to the same JSON
-  API the page itself calls
+  server-side HTML table, so `banks/hnb.py` talks directly to the same
+  JSON API the page itself calls
   (`https://venus.hnb.lk/api/get_interest_rates_contents`). That one API
   response contains all of HNB's published rates, so it's fetched once and
-  parsed three ways — fixed deposits, savings accounts, and loans — each
-  inserted into its own table. Loan rates that aren't a single flat
-  percentage (floating-rate formulas like `AWPLR + 2.50%`, ranges, foreign
-  currency loans) are skipped rather than surfaced as a misleading number.
-  Debug with:
+  parsed three ways — fixed deposits, savings accounts, and loans. Loan
+  rates that aren't a single flat percentage (floating-rate formulas like
+  `AWPLR + 2.50%`, ranges, foreign currency loans) are skipped rather than
+  surfaced as a misleading number.
 
-  ```sh
-  HNB_DEBUG_DUMP_JSON=1 go run ./cmd/scraper
-  ```
+- **ComBank**: `banks/combank.py` parses its FD page and a separate
+  `rates-tariff` hub page (Savings + Loans) with BeautifulSoup — both are
+  server-rendered HTML with real tables.
 
-  writes the fetched response to `hnb_rates.debug.json`.
-
-- **ComBank**: its rates page is server-rendered HTML with a real table, so
-  the scraper parses it directly with goquery. Debug with:
-
-  ```sh
-  COMBANK_DEBUG_DUMP_HTML=1 go run ./cmd/scraper
-  ```
-
-  writes the fetched page to `combank_fixed_deposits.debug.html`.
-
-- **BOC**: its rates & tariff page (`https://www.boc.lk/rates-tariff`) is
-  server-rendered HTML bundling many unrelated sections (exchange rates,
-  loan rates, a suspended senior citizen scheme, etc.) — the scraper picks
-  out only the "Rupee Fixed Deposits" table by section title. Cells are
-  trilingual (Sinhala/Tamil/English, `<br>`-separated); the parser keeps
-  only the English segment. Debug with:
-
-  ```sh
-  BOC_DEBUG_DUMP_HTML=1 go run ./cmd/scraper
-  ```
-
-  writes the fetched page to `boc_fixed_deposits.debug.html`.
+- **BOC**: `banks/boc.py` parses its `rates-tariff` page
+  (`https://www.boc.lk/rates-tariff`), which bundles many unrelated
+  sections (exchange rates, loan rates, a suspended senior citizen scheme,
+  etc.) — the scraper picks out only specific sections by title (e.g.
+  "Rupee Fixed Deposits", "Housing Loans"). Cells are trilingual
+  (Sinhala/Tamil/English, `<br>`-separated); the parser keeps only the
+  English segment.
 
 ### Running the scraper on a schedule
 
-The scraper is a one-shot binary, meant to be invoked periodically by the
-OS scheduler rather than run as a long-lived daemon. Build it once:
-
-```sh
-go build -o bin/scraper.exe ./cmd/scraper
-```
-
-On Windows, register a scheduled task pointing at `bin/run_scraper.bat`
-(which `cd`s into the project root first so `.env` is found, and appends
-output to `scraper.log`):
-
-```powershell
-schtasks /create /tn "SLFinanceCompare-Scraper" /tr "E:\SL-Finance_Compare\bin\run_scraper.bat" /sc HOURLY /mo 12 /st 06:00
-```
-
-On Linux/macOS, a cron entry calling the compiled binary from the project
-directory works the same way.
+The scraper is a one-shot script, meant to be invoked periodically by the
+OS scheduler rather than run as a long-lived process. On Windows, register
+a scheduled task pointing at a small wrapper batch file that activates the
+venv and runs `python main.py`; on Linux/macOS, a cron entry calling
+`scraper/.venv/bin/python scraper/main.py` from the project directory
+works the same way. In CI, `.github/workflows/scrape.yml` runs it on a
+cron schedule via `actions/setup-python`.
 
 ## Running the API
 
@@ -188,6 +178,37 @@ curl http://localhost:8080/api/v1/loan-rates
 Each endpoint queries `product_rates` filtered to a top-level category
 group (`FIXED_DEPOSIT`, `SAVINGS`, or `LOAN`) and returns the latest row
 per (product, tenure, rate label) as JSON.
+
+## Frontend (Nuxt.js)
+
+`frontend/` is the source of truth for the site — a Nuxt 3 app statically
+generated (no SSR server) into `web/`, which `cmd/api` serves unchanged.
+**Never hand-edit files under `web/`** — they're a build artifact and get
+overwritten by the next `npm run generate`.
+
+Dev workflow (hot-reload, run alongside the Go API):
+
+```sh
+go run ./cmd/api          # in one terminal — the API on :8080
+cd frontend
+npm install
+npm run dev                # in another terminal — Nuxt on :3000
+```
+
+`nuxt.config.ts`'s `nitro.devProxy` forwards `/api/*` requests from the
+Nuxt dev server to the Go API, so every page fetches the same relative
+`/api/v1/...` paths in dev and in production (same-origin once built).
+
+Building for deploy:
+
+```sh
+cd frontend
+npm run generate           # writes static output into ../web
+```
+
+Commit the resulting `web/` changes along with your `frontend/` changes —
+Render's deploy just builds and runs the Go binary (no Node build step),
+so the generated static files need to already be in the repo.
 
 ## Verifying data in Postgres
 

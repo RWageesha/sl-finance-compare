@@ -1,11 +1,13 @@
 name: Scrape Bank Rates
 
 on:
-  schedule:
-    # 03:45, 09:45, 15:45, 21:45 UTC == 9:15am, 3:15pm, 9:15pm, 3:15am
-    # Sri Lanka time (UTC+5:30, no DST, so this offset is fixed year-round)
-    # — four scrapes a day, six hours apart.
-    - cron: "45 3,9,15,21 * * *"
+  # No schedule here anymore — ComBank and BOC's WAFs 403 every request
+  # from GitHub's hosted-runner IP ranges (confirmed; HNB/NDB alone always
+  # succeeded from here). The real 4x/day automated scrape now runs from
+  # a Render Cron Job instead, whose IP isn't blocked. This workflow stays
+  # as a manual-only fallback (Actions tab -> Run workflow) — useful for
+  # getting HNB/NDB data specifically, or for testing scraper changes,
+  # without needing a Render deploy first.
   workflow_dispatch: {}
 
 jobs:

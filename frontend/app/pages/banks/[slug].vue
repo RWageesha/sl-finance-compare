@@ -68,6 +68,7 @@ function fmtPct(n: number): string {
 
         <section class="profile-header">
           <div class="profile-main">
+            <div class="bank-icon-lg"><BankLogo :bank="bank" /></div>
             <div class="title-row">
               <h1>{{ bank.displayName }}</h1>
               <span class="type-pill">{{ bank.type }}</span>
@@ -190,6 +191,25 @@ main {
 .profile-main {
   flex: 1;
   min-width: 0;
+}
+.bank-icon-lg {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+.bank-icon-lg svg {
+  width: 26px;
+  height: 26px;
 }
 .title-row {
   display: flex;

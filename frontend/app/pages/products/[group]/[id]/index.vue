@@ -97,7 +97,7 @@ const reportUrl = computed(() => {
           <section class="header-card">
             <div class="header-left">
               <div class="bank-line">
-                <div class="bank-icon"><Icon name="bank" /></div>
+                <div class="bank-icon"><BankLogo :bank="bank" /></div>
                 <NuxtLink v-if="bank" :to="`/banks/${bank.slug}`" class="bank-name">{{ bank.displayName }}</NuxtLink>
                 <span v-else class="bank-name">{{ row.bank_name }}</span>
               </div>
@@ -251,16 +251,16 @@ main {
 .bank-icon {
   width: 26px;
   height: 26px;
+  flex: none;
   border-radius: 6px;
-  background: #e6f0ff;
-  color: #1a4fb4;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-[data-theme='dark'] .bank-icon {
-  background: #17335f;
-  color: #a8c6ff;
+  padding: 3px;
+  overflow: hidden;
 }
 .bank-icon svg {
   width: 14px;

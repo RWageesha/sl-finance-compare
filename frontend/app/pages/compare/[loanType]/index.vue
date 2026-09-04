@@ -5,7 +5,7 @@
 // amount-based calculation (no LTV or balance data), so they're separate,
 // simpler pages. "fixed-deposits" is a static sibling route and always
 // takes precedence over this dynamic segment, so there's no collision.
-import { productDetailHref, emiPayment, fmtLkr } from '~/utils/fdCompare'
+import { productDetailHref, emiPayment, fmtLkr, bankForApiName } from '~/utils/fdCompare'
 import type { ProductRate } from '~/composables/useRatesApi'
 
 const LOAN_TYPE_META = {
@@ -104,7 +104,7 @@ function productLabel(r: ProductRate): string {
 
         <div v-else class="card-list">
           <div v-for="r in sorted" :key="r.id" class="loan-card">
-            <div class="loan-icon"><Icon name="bank" /></div>
+            <div class="loan-icon"><BankLogo :bank="bankForApiName(r.bank_name)" /></div>
             <div class="loan-main">
               <h3>{{ r.bank_name }}</h3>
               <p class="loan-sub">{{ productLabel(r) }}</p>
@@ -250,15 +250,14 @@ h1 {
   height: 38px;
   flex: none;
   border-radius: 8px;
-  background: #e8e6fd;
-  color: #3f2fb0;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-[data-theme='dark'] .loan-icon {
-  background: #241a5c;
-  color: #bcb2ff;
+  padding: 5px;
+  overflow: hidden;
 }
 .loan-icon svg {
   width: 18px;

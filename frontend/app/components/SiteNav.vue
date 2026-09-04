@@ -38,7 +38,10 @@ watch(() => route.fullPath, () => {
 <template>
   <nav class="site-nav">
     <div class="wrap">
-      <NuxtLink class="brand" to="/"><span class="mark">FR</span> FindRate</NuxtLink>
+      <NuxtLink class="brand" to="/">
+        <img src="/brand/logo.png" alt="FindRate" class="logo-img logo-light">
+        <img src="/brand/logo-white.png" alt="FindRate" class="logo-img logo-dark">
+      </NuxtLink>
       <div class="nav-links">
         <NuxtLink to="/banks">Banks</NuxtLink>
         <NuxtLink to="/products">Products</NuxtLink>
@@ -85,23 +88,20 @@ watch(() => route.fullPath, () => {
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 700;
-  font-size: 1.02rem;
-  text-decoration: none;
-  color: var(--text);
 }
-.brand .mark {
-  width: 26px;
+.logo-img {
   height: 26px;
-  border-radius: 7px;
-  background: var(--accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  font-weight: 800;
+  width: auto;
+  display: block;
+}
+.logo-dark {
+  display: none;
+}
+:root[data-theme='dark'] .logo-light {
+  display: none;
+}
+:root[data-theme='dark'] .logo-dark {
+  display: block;
 }
 .nav-links {
   display: flex;

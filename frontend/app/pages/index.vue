@@ -79,28 +79,6 @@ function onSearch() {
     <SiteNav @focus-search="focusSearch" />
 
     <header class="hero">
-      <!-- CSS-only skyline silhouette (no external image asset) with a
-           dark gradient overlay on top for text legibility. -->
-      <svg class="skyline" viewBox="0 0 1200 220" preserveAspectRatio="none" aria-hidden="true">
-        <rect x="0" y="120" width="70" height="100" />
-        <rect x="80" y="70" width="55" height="150" />
-        <rect x="145" y="140" width="60" height="80" />
-        <rect x="215" y="40" width="45" height="180" />
-        <rect x="270" y="100" width="65" height="120" />
-        <rect x="345" y="60" width="50" height="160" />
-        <rect x="405" y="130" width="70" height="90" />
-        <rect x="485" y="20" width="40" height="200" />
-        <rect x="535" y="85" width="60" height="135" />
-        <rect x="605" y="115" width="55" height="105" />
-        <rect x="670" y="50" width="45" height="170" />
-        <rect x="725" y="95" width="65" height="125" />
-        <rect x="800" y="35" width="50" height="185" />
-        <rect x="860" y="125" width="60" height="95" />
-        <rect x="930" y="65" width="55" height="155" />
-        <rect x="995" y="105" width="70" height="115" />
-        <rect x="1075" y="45" width="45" height="175" />
-        <rect x="1130" y="90" width="70" height="130" />
-      </svg>
       <div class="wrap">
         <h1>Compare Financial Products From Sri Lankan Banks</h1>
         <p>Interest rates scraped directly from official bank websites and refreshed automatically — no aggregator guesswork.</p>
@@ -204,23 +182,18 @@ function onSearch() {
   padding: 0 1.5rem;
 }
 
-/* Hero */
+/* Hero — real Colombo skyline photo, with the same navy gradient laid
+   over it (semi-transparent) that used to stand alone as the CSS-only
+   background, so the color language doesn't change, just the texture. */
 .hero {
   position: relative;
-  background: linear-gradient(180deg, var(--navy), var(--navy-dark));
+  background:
+    linear-gradient(180deg, rgba(26, 43, 107, 0.82), rgba(15, 24, 48, 0.9)),
+    url('/hero/skyline.jpg') center / cover no-repeat;
   color: #eef1fb;
   padding: 3.2rem 0 3.6rem;
   text-align: center;
   overflow: hidden;
-}
-.hero .skyline {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  color: rgba(255, 255, 255, 0.06);
-  fill: currentColor;
-  pointer-events: none;
 }
 .hero .wrap {
   position: relative;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { productDetailHref } from '~/utils/fdCompare'
+import { productDetailHref, bankForApiName } from '~/utils/fdCompare'
 import type { ProductRate } from '~/composables/useRatesApi'
 
 useHead({ title: 'Savings Account Comparison — FindRate LK' })
@@ -71,7 +71,7 @@ function productLabel(r: ProductRate): string {
 
         <div v-else class="card-list">
           <div v-for="r in filtered" :key="r.id" class="loan-card">
-            <div class="loan-icon"><Icon name="savings" /></div>
+            <div class="loan-icon"><BankLogo :bank="bankForApiName(r.bank_name)" /></div>
             <div class="loan-main">
               <h3>{{ r.bank_name }}</h3>
               <p class="loan-sub">
@@ -213,15 +213,14 @@ h1 {
   height: 38px;
   flex: none;
   border-radius: 8px;
-  background: #e0f7fa;
-  color: #00707a;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-[data-theme='dark'] .loan-icon {
-  background: #0d3a3e;
-  color: #7fe0eb;
+  padding: 5px;
+  overflow: hidden;
 }
 .loan-icon svg {
   width: 18px;

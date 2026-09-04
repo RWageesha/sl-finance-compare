@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isFdRow, bankSlugForApiName, fdSlug, maturityValue, fmtLkr } from '~/utils/fdCompare'
+import { isFdRow, bankSlugForApiName, fdSlug, maturityValue, fmtLkr, bankForApiName } from '~/utils/fdCompare'
 import type { ProductRate } from '~/composables/useRatesApi'
 
 useHead({ title: 'Fixed Deposit Comparison — FindRate LK' })
@@ -87,7 +87,7 @@ function detailHref(r: ProductRate): string | null {
 
         <div v-else class="card-list">
           <div v-for="r in matches" :key="r.id" class="fd-card">
-            <div class="fd-icon"><Icon name="bank" /></div>
+            <div class="fd-icon"><BankLogo :bank="bankForApiName(r.bank_name)" /></div>
             <div class="fd-main">
               <h3>{{ r.bank_name }}</h3>
               <p class="fd-sub">{{ fmtTenure(r.tenure_value ?? 0) }} Fixed Deposit &middot; {{ formatCategoryLabel(r.category_code) }}</p>
@@ -249,15 +249,14 @@ h1 {
   height: 38px;
   flex: none;
   border-radius: 8px;
-  background: #e6f0ff;
-  color: #1a4fb4;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-[data-theme='dark'] .fd-icon {
-  background: #17335f;
-  color: #a8c6ff;
+  padding: 5px;
+  overflow: hidden;
 }
 .fd-icon svg {
   width: 18px;

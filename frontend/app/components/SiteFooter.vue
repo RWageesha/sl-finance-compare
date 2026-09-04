@@ -12,7 +12,7 @@ const showLoanCalc = ref(false)
     <div class="wrap">
       <div class="footer-grid">
         <div class="footer-brand">
-          <h4 class="brand-title">FindRate LK</h4>
+          <h4 class="brand-title"><img src="/brand/logo-white.png" alt="FindRate LK" class="footer-logo"></h4>
           <p>A public, transparent directory of financial institutions and current interest rates in Sri Lanka. Powered by open banking standards.</p>
         </div>
         <div>
@@ -113,10 +113,13 @@ footer {
   text-decoration: underline;
 }
 .footer-brand .brand-title {
-  color: var(--footer-text);
-  font-size: 0.95rem;
+  margin: 0;
   text-transform: none;
-  letter-spacing: normal;
+}
+.footer-logo {
+  height: 20px;
+  width: auto;
+  display: block;
 }
 .footer-brand p {
   margin: 0.6rem 0 0;

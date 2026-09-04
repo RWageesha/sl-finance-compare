@@ -112,7 +112,7 @@ const filteredBanks = computed(() => {
         <p v-if="filteredBanks.length === 0" class="no-results">No banks match your filters.</p>
         <div v-else class="bank-grid">
           <div v-for="bank in filteredBanks" :key="bank.slug" class="bank-card" :class="{ untracked: !bank.tracked }">
-            <div class="bank-icon"><Icon :name="bank.icon" /></div>
+            <div class="bank-icon"><BankLogo :bank="bank" /></div>
             <h3>{{ bank.displayName }}</h3>
             <p class="bank-type">{{ bank.type }}</p>
 
@@ -354,17 +354,17 @@ main {
 .bank-icon {
   width: 38px;
   height: 38px;
+  flex: none;
   border-radius: 8px;
-  background: #e6f0ff;
-  color: #1a4fb4;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 5px;
+  overflow: hidden;
   margin-bottom: 0.7rem;
-}
-[data-theme='dark'] .bank-icon {
-  background: #17335f;
-  color: #a8c6ff;
 }
 .bank-icon svg {
   width: 18px;

@@ -21,6 +21,12 @@ export function bankSlugForApiName(apiName: string): string | undefined {
   return DIRECTORY_BANKS.find((b) => b.apiName === apiName)?.slug
 }
 
+// Pages that only have a row's bank_name string (not a DirectoryBank
+// object already) use this to render a real logo via BankLogo.vue.
+export function bankForApiName(apiName: string) {
+  return DIRECTORY_BANKS.find((b) => b.apiName === apiName)
+}
+
 // hnb-standard_fd-12 — bank slugs and category codes never contain a
 // hyphen (slugs are single words, category codes use underscores), so
 // splitting on "-" is unambiguous.

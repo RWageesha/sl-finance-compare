@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductRate } from '~/composables/useRatesApi'
+import { bankForApiName } from '~/utils/fdCompare'
 
 interface RecentRow extends ProductRate {
   kind: 'Fixed Deposit' | 'Savings' | 'Loan'
@@ -78,7 +79,7 @@ onMounted(async () => {
         <tr v-for="r in rows" :key="`${r.kind}-${r.id}`">
           <td>
             <span class="bank-cell">
-              <span class="bank-avatar">{{ r.bank_code.charAt(0) }}</span>{{ r.bank_name }}
+              <span class="bank-avatar"><BankLogo :bank="bankForApiName(r.bank_name)" /></span>{{ r.bank_name }}
             </span>
           </td>
           <td>{{ productLabel(r) }}</td>
@@ -145,17 +146,22 @@ td.action a:hover {
   gap: 0.5rem;
 }
 .bank-avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--accent);
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.68rem;
-  font-weight: 700;
+  padding: 3px;
+  overflow: hidden;
+}
+.bank-avatar svg {
+  width: 12px;
+  height: 12px;
 }
 .empty {
   text-align: center;

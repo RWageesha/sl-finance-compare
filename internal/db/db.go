@@ -206,6 +206,58 @@ func (d *DB) GetLatestRates(ctx context.Context, categoryGroup string) ([]models
 	return out, nil
 }
 
+// GetRateHistory returns every stored rate for one exact logical product
+// line — (product_id, tenure_value, tenure_label, rate_label), the same
+// tuple GetLatestRates groups by — ordered oldest to newest. Unlike
+// GetLatestRates (which returns only the newest row per line so the main
+// comparison tables stay uncluttered), this is what powers a single
+// product's rate-history/trend view, where every past scrape matters.
+// product_rates is append-only, so this is simply every row ever recorded
+// for that line. tenureValue is compared with IS NOT DISTINCT FROM so a
+// nil pointer correctly matches rows where tenure_value is NULL (e.g. most
+// savings/loan rows, which have no tenure).
+func (d *DB) GetRateHistory(ctx context.Context, productID int64, tenureValue *int, tenureLabel, rateLabel string) ([]models.ProductRate, error) {
+	rows, err := d.pool.Query(ctx, `
+		SELECT r.id, r.product_id, b.name, b.code, c.code, p.name,
+			r.tenure_value, r.tenure_unit, r.tenure_label, r.rate_label,
+			r.min_amount, r.interest_rate, r.source_url, r.confidence, r.scraped_at
+		FROM product_rates r
+		JOIN products p ON p.id = r.product_id
+		JOIN banks b ON b.id = p.bank_id
+		JOIN product_categories c ON c.id = p.category_id
+		WHERE r.product_id = $1
+			AND r.tenure_value IS NOT DISTINCT FROM $2
+			AND r.tenure_label = $3
+			AND r.rate_label = $4
+		ORDER BY r.scraped_at ASC
+	`, productID, tenureValue, tenureLabel, rateLabel)
+	if err != nil {
+		return nil, fmt.Errorf("db: query rate history for product %d: %w", productID, err)
+	}
+	defer rows.Close()
+
+	var out []models.ProductRate
+	for rows.Next() {
+		var r models.ProductRate
+		var tenureUnit *string
+		if err := rows.Scan(
+			&r.ID, &r.ProductID, &r.BankName, &r.BankCode, &r.CategoryCode, &r.ProductName,
+			&r.TenureValue, &tenureUnit, &r.TenureLabel, &r.RateLabel,
+			&r.MinAmount, &r.InterestRate, &r.SourceURL, &r.Confidence, &r.ScrapedAt,
+		); err != nil {
+			return nil, fmt.Errorf("db: scan rate history row: %w", err)
+		}
+		if tenureUnit != nil {
+			r.TenureUnit = *tenureUnit
+		}
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("db: iterate rate history rows: %w", err)
+	}
+	return out, nil
+}
+
 // GetOrCreateDataSource looks up a (bank, label) data source, inserting it
 // if it doesn't already exist. label is a short scraper-chosen identifier,
 // e.g. "hnb-fixed-deposits".

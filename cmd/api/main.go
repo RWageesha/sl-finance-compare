@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -58,6 +59,7 @@ func run() error {
 	mux.HandleFunc("GET /api/v1/fixed-deposits", handleFixedDeposits(database))
 	mux.HandleFunc("GET /api/v1/savings-rates", handleSavingsRates(database))
 	mux.HandleFunc("GET /api/v1/loan-rates", handleLoanRates(database))
+	mux.HandleFunc("GET /api/v1/rate-history", handleRateHistory(database))
 	mux.HandleFunc("GET /healthz", handleHealthz)
 	mux.Handle("/", spaFileServer{root: "web", fallback: "200.html"})
 
@@ -180,6 +182,50 @@ func handleRatesForGroup(database *db.DB, categoryGroup, errLabel string) http.H
 		writeJSON(w, http.StatusOK, map[string]any{
 			"count": len(rates),
 			"data":  rates,
+		})
+	}
+}
+
+// handleRateHistory serves every stored rate for one exact logical product
+// line, oldest first — the data behind a single product's rate-history/
+// trend view. The four query params together identify that line the same
+// way GetLatestRates groups rows for the main comparison tables:
+// product_id (required), plus tenure_value/tenure_label/rate_label
+// (optional — omit tenure_value for products with no tenure, e.g. most
+// savings/loan rows; omitted tenure_label/rate_label match the ” most
+// rows default to).
+func handleRateHistory(database *db.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+
+		q := r.URL.Query()
+		productID, err := strconv.ParseInt(q.Get("product_id"), 10, 64)
+		if err != nil || productID <= 0 {
+			writeJSONError(w, http.StatusBadRequest, "product_id is required and must be a positive integer")
+			return
+		}
+
+		var tenureValue *int
+		if v := q.Get("tenure_value"); v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				writeJSONError(w, http.StatusBadRequest, "tenure_value must be an integer")
+				return
+			}
+			tenureValue = &n
+		}
+
+		history, err := database.GetRateHistory(ctx, productID, tenureValue, q.Get("tenure_label"), q.Get("rate_label"))
+		if err != nil {
+			log.Printf("api: get rate history: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "failed to load rate history")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"count": len(history),
+			"data":  history,
 		})
 	}
 }

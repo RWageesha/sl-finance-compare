@@ -10,19 +10,34 @@ if (!parsed) {
   throw createError({ statusCode: 404, statusMessage: 'Product not found', fatal: true })
 }
 
-const { fetchFixedDeposits } = useRatesApi()
+const { fetchFixedDeposits, fetchRateHistory } = useRatesApi()
 const fdRows = ref<ProductRate[]>([])
 const loading = ref(true)
 const row = ref<ProductRate | null>(null)
+// Oldest first, as returned by the API — every scrape ever recorded for
+// this exact product line, not just the latest one `row` holds.
+const history = ref<ProductRate[]>([])
 
 onMounted(async () => {
   try {
     fdRows.value = (await fetchFixedDeposits().catch(() => [])).filter(isFdRow)
     row.value = findFdRow(fdRows.value, parsed!) ?? null
+    if (row.value) {
+      history.value = await fetchRateHistory({
+        product_id: row.value.product_id,
+        tenure_value: row.value.tenure_value,
+        tenure_label: row.value.tenure_label,
+        rate_label: row.value.rate_label
+      }).catch(() => [])
+    }
   } finally {
     loading.value = false
   }
 })
+
+const chartPoints = computed(() => history.value.map((r) => ({ date: r.scraped_at, rate: r.interest_rate })))
+// Newest first for the table, so the most recent scrape reads at the top.
+const historyDesc = computed(() => [...history.value].reverse())
 
 const bank = computed(() => DIRECTORY_BANKS.find((b) => b.slug === parsed!.bankSlug))
 
@@ -69,9 +84,10 @@ useHead({
 
           <section class="panel">
             <h2>Rate Trend</h2>
-            <div class="trend-empty">
+            <RateTrendChart v-if="chartPoints.length > 1" :points="chartPoints" />
+            <div v-else class="trend-empty">
               <p><strong>Not enough history yet for a trend chart.</strong></p>
-              <p>Only one scrape has been recorded for this product so far. Scrapes run twice daily (around 06:00 and 18:00 Sri Lanka time) — a chart will appear here once at least two data points exist, since every scrape is stored rather than overwritten.</p>
+              <p>Only one scrape has been recorded for this product so far. Scrapes run four times daily (around 3:15am, 9:15am, 3:15pm, and 9:15pm Sri Lanka time) — a chart will appear here once at least two data points exist, since every scrape is stored rather than overwritten.</p>
             </div>
           </section>
 
@@ -87,11 +103,11 @@ useHead({
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>{{ fmtDate(row.scraped_at) }}</td>
-                    <td><strong>{{ row.interest_rate.toFixed(2) }}%</strong></td>
+                  <tr v-for="h in (historyDesc.length ? historyDesc : [row])" :key="h.id">
+                    <td>{{ fmtDate(h.scraped_at) }}</td>
+                    <td><strong>{{ h.interest_rate.toFixed(2) }}%</strong></td>
                     <td>
-                      <a v-if="row.source_url" :href="row.source_url" target="_blank" rel="noopener">Official page &rarr;</a>
+                      <a v-if="h.source_url" :href="h.source_url" target="_blank" rel="noopener">Official page &rarr;</a>
                       <span v-else class="muted">&mdash;</span>
                     </td>
                   </tr>

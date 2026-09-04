@@ -2,8 +2,13 @@ name: Scrape Bank Rates
 
 on:
   schedule:
-    # 00:30 and 12:30 UTC ~= 06:00 and 18:00 Sri Lanka time (UTC+5:30)
-    - cron: "30 0,12 * * *"
+    # Hourly, on the hour — temporarily bumped up from twice a day so it's
+    # easy to watch a few real runs land in a short window. Once you've
+    # confirmed it's working, dial this back (e.g. to the previous
+    # "30 0,12 * * *" for 06:00/18:00 Sri Lanka time) — the bank sites
+    # don't publish new rates every hour, so hourly is only useful for
+    # this verification period, not as the steady-state schedule.
+    - cron: "0 * * * *"
   workflow_dispatch: {}
 
 jobs:

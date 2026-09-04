@@ -1,7 +1,7 @@
 // Shared bank-directory data used by pages/banks.vue (the directory grid)
 // and pages/banks/[slug].vue (individual profile pages).
 //
-// Only the three banks marked tracked: true are actually scraped
+// Only the banks marked tracked: true are actually scraped
 // (scraper/banks/) — the rest are listed so the directory/profile pages
 // show the real shape of the Sri Lankan bank market, but they carry no
 // invented statistics: no fabricated "data health" percentages, credit
@@ -61,7 +61,16 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     logoExt: 'jpeg'
   },
   { slug: 'sampath', displayName: 'Sampath Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
-  { slug: 'ndb', displayName: 'National Development Bank (NDB)', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
+  {
+    slug: 'ndb',
+    apiName: 'National Development Bank',
+    displayName: 'National Development Bank (NDB)',
+    type: 'Commercial Bank',
+    icon: 'bank',
+    tracked: true,
+    sourceUrl: 'https://www.ndbbank.com/rates/interest-rates-on-deposits',
+    logoExt: 'png'
+  },
   { slug: 'seylan', displayName: 'Seylan Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
   { slug: 'dfcc', displayName: 'DFCC Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
   { slug: 'peoples', displayName: "People's Bank", type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },

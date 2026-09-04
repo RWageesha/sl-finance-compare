@@ -2,7 +2,8 @@
 
 Scrapes, normalizes, and compares Sri Lankan bank financial product rates.
 Tracks Fixed Deposit, Savings Account, and Loan rates from Hatton National
-Bank (HNB), Commercial Bank of Ceylon (ComBank), and Bank of Ceylon (BOC).
+Bank (HNB), Commercial Bank of Ceylon (ComBank), Bank of Ceylon (BOC), and
+National Development Bank (NDB).
 
 **Target stack:** Nuxt.js frontend · Go backend · PostgreSQL · Python for
 data collection. All four now match.

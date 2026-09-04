@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 import normalize
 import validate
-from banks import boc, combank, hnb
+from banks import boc, combank, hnb, ndb
 from db import DB, ProductRate, ScrapeRun
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -225,6 +225,55 @@ def _scrape_boc(db: DB) -> list[Exception]:
     return errors
 
 
+def _scrape_ndb(db: DB) -> list[Exception]:
+    """NDB publishes Fixed Deposit and Savings rates together on one
+    deposits page, and Loan rates on a separate advances page — two
+    fetches, three parses, same shape as combank.
+    """
+    errors: list[Exception] = []
+    bank_id = db.get_or_create_bank(ndb.BANK_NAME, ndb.BANK_CODE)
+
+    log.info("ndb: fetching deposit rates")
+    deposits_html = ndb.fetch_deposits_page()
+
+    def fd() -> int:
+        rows = ndb.parse_fixed_deposits(deposits_html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(ndb.BANK_NAME), db, bank_id, "ndb")
+        db.insert_product_rates(product_rates)
+        log.info("ndb: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def savings() -> int:
+        rows = ndb.parse_savings(deposits_html)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "ndb")
+        db.insert_product_rates(product_rates)
+        log.info("ndb: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, fn in (("ndb-fixed-deposits", fd), ("ndb-savings", savings)):
+        err = _run_scrape(db, bank_id, label, ndb.DEPOSITS_URL, fn)
+        if err is not None:
+            log.warning("ndb: %s: %s", label, err)
+            errors.append(err)
+
+    log.info("ndb: fetching lending rates")
+
+    def loans() -> int:
+        html = ndb.fetch_advances_page()
+        rows = ndb.parse_loans(html)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "ndb")
+        db.insert_product_rates(product_rates)
+        log.info("ndb: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    err = _run_scrape(db, bank_id, "ndb-loans", ndb.ADVANCES_URL, loans)
+    if err is not None:
+        log.warning("ndb: loans: %s", err)
+        errors.append(err)
+
+    return errors
+
+
 def run() -> list[Exception]:
     load_dotenv()
 
@@ -238,7 +287,7 @@ def run() -> list[Exception]:
         # shouldn't block scraping the others, so run every scraper and
         # only report failure at the end (still surfacing every individual
         # error via log).
-        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc):
+        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc, _scrape_ndb):
             try:
                 errors.extend(scrape_bank(db))
             except Exception as exc:  # noqa: BLE001 - a bank-level fetch failure (e.g. network down)

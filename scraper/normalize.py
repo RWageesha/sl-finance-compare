@@ -44,6 +44,12 @@ def fixed_deposit(db: DB, bank_id: int, bank_name: str, rate: dict) -> ProductRa
         product_id=product_id,
         tenure_value=rate["tenure_months"],
         tenure_unit="MONTH",
+        # Optional: a bank's own tenure wording (e.g. "100 Days"), kept
+        # verbatim when a day-based tenure rounds to the same tenure_months
+        # as an unrelated whole-month product — without this, the two would
+        # collide on (tenure_value, tenure_label, rate_label) and the "latest
+        # per key" API view would silently drop one of them.
+        tenure_label=rate.get("tenure_label", ""),
         min_amount=rate.get("min_amount"),
         interest_rate=rate["interest_rate"],
         source_url=rate.get("source_url", ""),

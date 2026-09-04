@@ -2,7 +2,7 @@
 import { BANK_TYPES, DIRECTORY_BANKS, computeBankStats } from '~/utils/bankDirectory'
 import type { DirectoryBank, TaggedRow } from '~/utils/bankDirectory'
 
-useHead({ title: 'Bank Directory — OpenFinance LK' })
+useHead({ title: 'Bank Directory — FindRate LK' })
 
 const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
 
@@ -74,7 +74,7 @@ const filteredBanks = computed(() => {
           <div class="hero-copy">
             <span class="pill pill-accent"><Icon name="bank" /> Sri Lanka</span>
             <h1>All Banks</h1>
-            <p>Explore and search financial institutions currently integrated with OpenFinance LK data feeds.</p>
+            <p>Explore and search financial institutions currently integrated with FindRate LK data feeds.</p>
             <div class="hero-badges">
               <span class="pill"><Icon name="shield" /> Public disclosures</span>
               <span class="pill"><Icon name="clock" /> Updated daily</span>

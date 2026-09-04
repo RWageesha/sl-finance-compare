@@ -62,7 +62,7 @@ def fetch_rates_json() -> dict:
     resp = requests.get(
         RATES_API_URL,
         headers={
-            "User-Agent": "Mozilla/5.0 (compatible; SLFinanceCompareBot/1.0; +https://github.com/)",
+            "User-Agent": "Mozilla/5.0 (compatible; FindRateLKBot/1.0; +https://github.com/)",
             "Accept": "application/json",
         },
         timeout=_REQUEST_TIMEOUT,

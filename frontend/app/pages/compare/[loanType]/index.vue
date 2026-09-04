@@ -13,14 +13,14 @@ const LOAN_TYPE_META = {
     category: 'HOUSING_LOAN',
     tabId: 'housing-loans' as const,
     title: 'Housing Loan Comparison',
-    desc: 'Compare structured residential housing finance products from banks OpenFinance LK tracks in Sri Lanka.',
+    desc: 'Compare structured residential housing finance products from banks FindRate LK tracks in Sri Lanka.',
     defaultTenure: 240
   },
   'personal-loans': {
     category: 'PERSONAL_LOAN',
     tabId: 'personal-loans' as const,
     title: 'Personal Loan Comparison',
-    desc: 'Compare personal loan rates from banks OpenFinance LK tracks in Sri Lanka.',
+    desc: 'Compare personal loan rates from banks FindRate LK tracks in Sri Lanka.',
     defaultTenure: 60
   }
 } as const
@@ -32,7 +32,7 @@ if (!(loanType in LOAN_TYPE_META)) {
 }
 const meta = LOAN_TYPE_META[loanType]
 
-useHead({ title: `${meta.title} — OpenFinance LK` })
+useHead({ title: `${meta.title} — FindRate LK` })
 
 const { fetchLoans } = useRatesApi()
 const rows = ref<ProductRate[]>([])

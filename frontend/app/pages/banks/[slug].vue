@@ -10,7 +10,7 @@ if (!bank) {
   throw createError({ statusCode: 404, statusMessage: 'Bank not found', fatal: true })
 }
 
-useHead({ title: `${bank.displayName} — OpenFinance LK` })
+useHead({ title: `${bank.displayName} — FindRate LK` })
 
 const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
 
@@ -77,7 +77,7 @@ function fmtPct(n: number): string {
                 Rates below are scraped directly from {{ bank.displayName }}'s own published rates page and refreshed automatically — every figure links back to its source so you can verify it yourself.
               </template>
               <template v-else>
-                OpenFinance LK doesn't have a live data feed for {{ bank.displayName }} yet. It's listed here to show the full shape of the market — {{ bank.type.toLowerCase() }} coverage may be added later.
+                FindRate doesn't have a live data feed for {{ bank.displayName }} yet. It's listed here to show the full shape of the market — {{ bank.type.toLowerCase() }} coverage may be added later.
               </template>
             </p>
             <a v-if="bank.sourceUrl" class="official-link" :href="bank.sourceUrl" target="_blank" rel="noopener">

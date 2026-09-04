@@ -50,7 +50,7 @@ const bank = computed(() => (row.value ? DIRECTORY_BANKS.find((b) => b.apiName =
 
 useHead({
   title: computed(() =>
-    row.value ? `${row.value.bank_name} — ${formatCategoryLabel(row.value.category_code)} — OpenFinance LK` : `${meta.noun} — OpenFinance LK`
+    row.value ? `${row.value.bank_name} — ${formatCategoryLabel(row.value.category_code)} — FindRate LK` : `${meta.noun} — FindRate LK`
   )
 })
 
@@ -138,7 +138,7 @@ const reportUrl = computed(() => {
                   </div>
                 </div>
                 <p class="disclosure-note">
-                  OpenFinance LK doesn't yet capture {{ meta.disclosure }} for this product.
+                  FindRate doesn't yet capture {{ meta.disclosure }} for this product.
                   <a v-if="row.source_url" :href="row.source_url" target="_blank" rel="noopener">See {{ bank?.displayName ?? row.bank_name }}'s official page</a> for full terms before making a decision.
                 </p>
               </section>

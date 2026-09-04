@@ -78,7 +78,7 @@ func FetchRatesJSON(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("hnb: build request: %w", err)
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; SLFinanceCompareBot/1.0; +https://github.com/)")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; FindRateLKBot/1.0; +https://github.com/)")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)

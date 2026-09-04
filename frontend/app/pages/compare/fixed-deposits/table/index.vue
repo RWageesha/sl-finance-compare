@@ -3,7 +3,7 @@ import { isFdRow, maturityValue, fmtLkr } from '~/utils/fdCompare'
 import { DIRECTORY_BANKS } from '~/utils/bankDirectory'
 import type { ProductRate } from '~/composables/useRatesApi'
 
-useHead({ title: 'Fixed Deposit Comparison — Table View — OpenFinance LK' })
+useHead({ title: 'Fixed Deposit Comparison — Table View — FindRate LK' })
 
 const route = useRoute()
 const { fetchFixedDeposits } = useRatesApi()
@@ -71,7 +71,7 @@ const columns = computed<Column[]>(() => {
 
         <p class="eyebrow">Product Comparison</p>
         <h1>Fixed Deposit Comparison &mdash; Table View</h1>
-        <p class="sub">Side-by-side breakdown of {{ fmtTenure(tenure) }} fixed deposits at Rs. {{ amount.toLocaleString('en-LK') }}, across the banks OpenFinance LK tracks.</p>
+        <p class="sub">Side-by-side breakdown of {{ fmtTenure(tenure) }} fixed deposits at Rs. {{ amount.toLocaleString('en-LK') }}, across the banks FindRate LK tracks.</p>
 
         <div class="bank-picker">
           <label v-for="b in TRACKED" :key="b.slug" class="bank-check">

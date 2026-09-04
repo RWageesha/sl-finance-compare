@@ -12,7 +12,7 @@ const showLoanCalc = ref(false)
     <div class="wrap">
       <div class="footer-grid">
         <div class="footer-brand">
-          <h4 class="brand-title">OpenFinance LK</h4>
+          <h4 class="brand-title">FindRate LK</h4>
           <p>A public, transparent directory of financial institutions and current interest rates in Sri Lanka. Powered by open banking standards.</p>
         </div>
         <div>
@@ -46,7 +46,7 @@ const showLoanCalc = ref(false)
         </div>
       </div>
       <div class="footer-bottom">
-        <span>&copy; 2026 OpenFinance LK. Rates are informational, not financial advice.</span>
+        <span>&copy; 2026 FindRate LK. Rates are informational, not financial advice.</span>
         <div class="footer-bottom-right">
           <span class="footer-soon" title="Coming soon">Privacy Policy</span>
           <span class="footer-soon" title="Coming soon">Disclaimer</span>

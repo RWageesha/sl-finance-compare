@@ -2,7 +2,7 @@
 import { isFdRow } from '~/utils/fdCompare'
 import type { ProductRate } from '~/composables/useRatesApi'
 
-useHead({ title: 'Compare Fixed Deposit Rates — OpenFinance LK' })
+useHead({ title: 'Compare Fixed Deposit Rates — FindRate LK' })
 
 const { fetchFixedDeposits } = useRatesApi()
 const fdRows = ref<ProductRate[]>([])

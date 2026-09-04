@@ -3,7 +3,7 @@ import { emiPayment, fmtLkr } from '~/utils/fdCompare'
 import { amortizationSchedule } from '~/utils/calculatorMath'
 import type { ProductRate } from '~/composables/useRatesApi'
 
-useHead({ title: 'Loan EMI Calculator — OpenFinance LK' })
+useHead({ title: 'Loan EMI Calculator — FindRate LK' })
 
 const { fetchLoans } = useRatesApi()
 const rows = ref<ProductRate[]>([])

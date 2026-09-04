@@ -37,7 +37,7 @@ function productLabel(r: ProductRate): string {
 }
 
 useHead({
-  title: computed(() => (row.value ? `Rate History — ${row.value.bank_name} ${formatCategoryLabel(row.value.category_code)} — OpenFinance LK` : 'Rate History — OpenFinance LK'))
+  title: computed(() => (row.value ? `Rate History — ${row.value.bank_name} ${formatCategoryLabel(row.value.category_code)} — FindRate LK` : 'Rate History — FindRate LK'))
 })
 </script>
 

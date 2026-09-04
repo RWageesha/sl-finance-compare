@@ -1,4 +1,4 @@
-# SL Finance Compare
+# FindRate LK
 
 Scrapes, normalizes, and compares Sri Lankan bank financial product rates.
 Tracks Fixed Deposit, Savings Account, and Loan rates from Hatton National

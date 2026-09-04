@@ -4,7 +4,7 @@ import { calcFd } from '~/utils/calculatorMath'
 import type { FdFrequency } from '~/utils/calculatorMath'
 import type { ProductRate } from '~/composables/useRatesApi'
 
-useHead({ title: 'Fixed Deposit Calculator — OpenFinance LK' })
+useHead({ title: 'Fixed Deposit Calculator — FindRate LK' })
 
 const { fetchFixedDeposits } = useRatesApi()
 const fdRows = ref<ProductRate[]>([])
@@ -91,7 +91,7 @@ const maxBar = computed(() => Math.max(...growthBars.value, 1))
       <div class="wrap">
         <p class="eyebrow">Fixed Deposit</p>
         <h1>Fixed Deposit Calculator</h1>
-        <p class="sub">Estimate your monthly or maturity returns for fixed deposits across banks OpenFinance LK tracks in Sri Lanka.</p>
+        <p class="sub">Estimate your monthly or maturity returns for fixed deposits across banks FindRate LK tracks in Sri Lanka.</p>
 
         <div class="calc-grid">
           <div class="panel">

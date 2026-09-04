@@ -38,7 +38,7 @@ watch(() => route.fullPath, () => {
 <template>
   <nav class="site-nav">
     <div class="wrap">
-      <NuxtLink class="brand" to="/"><span class="mark">OF</span> OpenFinance LK</NuxtLink>
+      <NuxtLink class="brand" to="/"><span class="mark">FR</span> FindRate</NuxtLink>
       <div class="nav-links">
         <NuxtLink to="/banks">Banks</NuxtLink>
         <NuxtLink to="/products">Products</NuxtLink>

@@ -107,7 +107,7 @@ onMounted(() => {
   loadTab(activeTab.value)
 })
 
-useHead({ title: 'Compare Rates — OpenFinance LK' })
+useHead({ title: 'Compare Rates — FindRate LK' })
 </script>
 
 <template>
@@ -118,7 +118,7 @@ useHead({ title: 'Compare Rates — OpenFinance LK' })
           <NuxtLink class="back" to="/">&larr; Back to home</NuxtLink>
           <ThemeToggle />
         </div>
-        <h1>OpenFinance LK</h1>
+        <h1>FindRate LK</h1>
         <p>Fixed Deposit, Savings, and Loan rates across Sri Lankan banks</p>
       </div>
     </header>

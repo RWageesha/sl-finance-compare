@@ -2,7 +2,7 @@
 import { isFdRow, bankSlugForApiName, fdSlug, maturityValue, fmtLkr } from '~/utils/fdCompare'
 import type { ProductRate } from '~/composables/useRatesApi'
 
-useHead({ title: 'Fixed Deposit Comparison — OpenFinance LK' })
+useHead({ title: 'Fixed Deposit Comparison — FindRate LK' })
 
 const route = useRoute()
 const { fetchFixedDeposits } = useRatesApi()

@@ -5,7 +5,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'OpenFinance LK',
+      title: 'FindRate LK',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
       ],

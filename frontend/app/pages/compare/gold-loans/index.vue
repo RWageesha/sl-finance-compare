@@ -2,7 +2,7 @@
 import { productDetailHref } from '~/utils/fdCompare'
 import type { ProductRate } from '~/composables/useRatesApi'
 
-useHead({ title: 'Gold Loan Comparison — OpenFinance LK' })
+useHead({ title: 'Gold Loan Comparison — FindRate LK' })
 
 const { fetchLoans } = useRatesApi()
 const rows = ref<ProductRate[]>([])
@@ -38,7 +38,7 @@ function productLabel(r: ProductRate): string {
       <div class="wrap">
         <p class="eyebrow">Financial Products</p>
         <h1>Gold Loan Comparison</h1>
-        <p class="sub">Compare gold loan (pawning) interest rates across banks OpenFinance LK tracks in Sri Lanka.</p>
+        <p class="sub">Compare gold loan (pawning) interest rates across banks FindRate LK tracks in Sri Lanka.</p>
 
         <CompareTabs active="gold-loans" />
 
@@ -83,7 +83,7 @@ function productLabel(r: ProductRate): string {
           </div>
         </div>
 
-        <p class="calc-note">OpenFinance LK doesn't yet capture loan-to-value limits or estimated advance amounts for gold loans — see each bank's linked source for that.</p>
+        <p class="calc-note">FindRate doesn't yet capture loan-to-value limits or estimated advance amounts for gold loans — see each bank's linked source for that.</p>
       </div>
     </main>
 

@@ -28,7 +28,7 @@ const bank = computed(() => DIRECTORY_BANKS.find((b) => b.slug === parsed!.bankS
 
 useHead({
   title: computed(() =>
-    row.value ? `Rate History — ${bank.value?.displayName ?? row.value.bank_name} ${fmtTenure(row.value.tenure_value ?? 0)} FD — OpenFinance LK` : 'Rate History — OpenFinance LK'
+    row.value ? `Rate History — ${bank.value?.displayName ?? row.value.bank_name} ${fmtTenure(row.value.tenure_value ?? 0)} FD — FindRate LK` : 'Rate History — FindRate LK'
   )
 })
 </script>

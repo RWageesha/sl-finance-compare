@@ -4,7 +4,7 @@ import type { ProductEntry } from '~/utils/productDirectory'
 import { DIRECTORY_BANKS } from '~/utils/bankDirectory'
 import type { TaggedRow } from '~/utils/bankDirectory'
 
-useHead({ title: 'Financial Products — OpenFinance LK' })
+useHead({ title: 'Financial Products — FindRate LK' })
 
 const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
 const allRows = ref<TaggedRow[]>([])
@@ -93,7 +93,7 @@ function onSearch() {
                   <span v-else class="compare-link disabled">Not tracked</span>
                 </div>
                 <p class="item-desc">
-                  <template v-if="!item.tracked">Not tracked by OpenFinance LK yet.</template>
+                  <template v-if="!item.tracked">Not tracked by FindRate yet.</template>
                   <template v-else-if="loading">Loading…</template>
                   <template v-else>
                     Tracked at {{ statsFor(item).banks }} of {{ TRACKED_BANK_COUNT }} banks — {{ statsFor(item).rates }} live rate{{ statsFor(item).rates === 1 ? '' : 's' }}.

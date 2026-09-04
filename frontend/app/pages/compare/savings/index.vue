@@ -2,7 +2,7 @@
 import { productDetailHref } from '~/utils/fdCompare'
 import type { ProductRate } from '~/composables/useRatesApi'
 
-useHead({ title: 'Savings Account Comparison — OpenFinance LK' })
+useHead({ title: 'Savings Account Comparison — FindRate LK' })
 
 const { fetchSavings } = useRatesApi()
 const rows = ref<ProductRate[]>([])
@@ -42,7 +42,7 @@ function productLabel(r: ProductRate): string {
       <div class="wrap">
         <p class="eyebrow">Financial Products</p>
         <h1>Savings Account Comparison</h1>
-        <p class="sub">Compare savings account interest rates across banks OpenFinance LK tracks in Sri Lanka.</p>
+        <p class="sub">Compare savings account interest rates across banks FindRate LK tracks in Sri Lanka.</p>
 
         <CompareTabs active="savings" />
 
@@ -90,7 +90,7 @@ function productLabel(r: ProductRate): string {
           </div>
         </div>
 
-        <p class="calc-note">OpenFinance LK doesn't yet capture minimum balance requirements or account fees for savings accounts — see each bank's linked source for that.</p>
+        <p class="calc-note">FindRate doesn't yet capture minimum balance requirements or account fees for savings accounts — see each bank's linked source for that.</p>
       </div>
     </main>
 

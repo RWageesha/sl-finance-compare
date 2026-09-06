@@ -46,11 +46,11 @@ export const PRODUCT_DIRECTORY: ProductGroupDef[] = [
 // dedicated compare page now; Vehicle Loans (LEASE) doesn't, so it still
 // goes to the general filtered rates table.
 const DEDICATED_HREF: Record<string, string> = {
-  fd: '/compare/fixed-deposits',
+  fd: '/products/fixed-deposits',
   'loans:HOUSING_LOAN': '/compare/housing-loans',
   'loans:PERSONAL_LOAN': '/compare/personal-loans',
   'loans:GOLD_LOAN': '/compare/gold-loans',
-  savings: '/compare/savings'
+  savings: '/compare/savings-accounts'
 }
 
 export function productHref(item: ProductEntry): string {

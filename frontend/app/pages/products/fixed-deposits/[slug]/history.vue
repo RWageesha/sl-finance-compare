@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { isFdRow, parseFdSlug, findFdRow } from '~/utils/fdCompare'
 import { DIRECTORY_BANKS } from '~/utils/bankDirectory'
+import { bankColor, bankInitial } from '~/utils/bankColors'
 import type { ProductRate } from '~/composables/useRatesApi'
 
 const route = useRoute()
@@ -14,7 +15,7 @@ const { fetchFixedDeposits, fetchRateHistory } = useRatesApi()
 const fdRows = ref<ProductRate[]>([])
 const loading = ref(true)
 const row = ref<ProductRate | null>(null)
-// Oldest first, as returned by the API — every scrape ever recorded for
+// Oldest first, as the API returns it — every scrape ever recorded for
 // this exact product line, not just the latest one `row` holds.
 const history = ref<ProductRate[]>([])
 
@@ -35,10 +36,6 @@ onMounted(async () => {
   }
 })
 
-const chartPoints = computed(() => history.value.map((r) => ({ date: r.scraped_at, rate: r.interest_rate })))
-// Newest first for the table, so the most recent scrape reads at the top.
-const historyDesc = computed(() => [...history.value].reverse())
-
 const bank = computed(() => DIRECTORY_BANKS.find((b) => b.slug === parsed!.bankSlug))
 
 useHead({
@@ -46,236 +43,153 @@ useHead({
     row.value ? `Rate History — ${bank.value?.displayName ?? row.value.bank_name} ${fmtTenure(row.value.tenure_value ?? 0)} FD — FindRate LK` : 'Rate History — FindRate LK'
   )
 })
+
+const RANGE_OPTIONS = ['3M', '6M', '1Y', 'All'] as const
+const activeRange = ref<(typeof RANGE_OPTIONS)[number]>('All')
+function cutoffDate(range: string): Date | null {
+  if (range === 'All') return null
+  const now = new Date()
+  now.setMonth(now.getMonth() - (range === '3M' ? 3 : range === '6M' ? 6 : 12))
+  return now
+}
+const rangedHistory = computed(() => {
+  const cutoff = cutoffDate(activeRange.value)
+  return cutoff ? history.value.filter((r) => new Date(r.scraped_at) >= cutoff) : history.value
+})
+const chartPoints = computed(() => rangedHistory.value.map((r) => ({ date: r.scraped_at, rate: r.interest_rate })))
+
+// Newest first for the table, so the most recent scrape reads at the top.
+const historyDesc = computed(() => [...history.value].reverse())
+// Each row's delta against the scrape immediately before it — real,
+// computed from stored history, not a fabricated log.
+const changesDesc = computed(() =>
+  historyDesc.value.map((h, i) => {
+    const prev = historyDesc.value[i + 1]
+    if (!prev) return { dir: 'none' as const, amount: 0 }
+    const delta = h.interest_rate - prev.interest_rate
+    if (delta > 0) return { dir: 'up' as const, amount: delta }
+    if (delta < 0) return { dir: 'down' as const, amount: Math.abs(delta) }
+    return { dir: 'none' as const, amount: 0 }
+  })
+)
+
+const reportUrl = computed(() => {
+  if (!row.value || !bank.value) return '/report-issue'
+  const params = new URLSearchParams({
+    bank: bank.value.slug,
+    category: 'Fixed Deposits',
+    product: `${fmtTenure(row.value.tenure_value ?? 0)} Fixed Deposit`,
+    currentValue: `${row.value.interest_rate.toFixed(2)}% p.a.`
+  })
+  return `/report-issue?${params.toString()}`
+})
 </script>
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
-    <main>
-      <div class="wrap">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-          <NuxtLink to="/">Home</NuxtLink>
-          <span>/</span>
-          <NuxtLink to="/compare/fixed-deposits">Fixed Deposits</NuxtLink>
-          <span>/</span>
-          <NuxtLink :to="`/products/fixed-deposits/${slug}`">{{ bank ? `${bank.displayName} ${row ? fmtTenure(row.tenure_value ?? 0) : ''} FD` : 'Product' }}</NuxtLink>
-          <span>/</span>
-          <span>Rate History</span>
+    <main class="min-h-screen bg-page px-4 py-6 sm:px-6">
+      <div class="mx-auto max-w-[900px]">
+        <nav class="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-muted" aria-label="Breadcrumb">
+          <NuxtLink to="/" class="hover:text-primary">Home</NuxtLink>
+          <span>&rsaquo;</span>
+          <NuxtLink to="/banks" class="hover:text-primary">Banks</NuxtLink>
+          <span>&rsaquo;</span>
+          <NuxtLink v-if="bank" :to="`/banks/${bank.slug}`" class="hover:text-primary">{{ bank.displayName }}</NuxtLink>
+          <span>&rsaquo;</span>
+          <NuxtLink :to="`/products/fixed-deposits/${slug}`" class="hover:text-primary">{{ row ? fmtTenure(row.tenure_value ?? 0) : '' }} Fixed Deposit</NuxtLink>
+          <span>&rsaquo;</span>
+          <span class="font-semibold text-primary">History</span>
         </nav>
 
-        <p v-if="loading" class="empty">Loading…</p>
-        <p v-else-if="!row" class="empty">
+        <p v-if="loading" class="rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">Loading…</p>
+        <p v-else-if="!row" class="rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">
           This product isn't in our current dataset.
-          <NuxtLink to="/compare/fixed-deposits">Browse Fixed Deposits &rarr;</NuxtLink>
+          <NuxtLink to="/products/fixed-deposits" class="mt-2 block font-bold text-primary hover:underline">Browse Fixed Deposits &rarr;</NuxtLink>
         </p>
 
         <template v-else>
-          <section class="header-card">
-            <div>
-              <h1>{{ bank?.displayName ?? row.bank_name }} {{ fmtTenure(row.tenure_value ?? 0) }} Fixed Deposit</h1>
-              <p class="sub">Rate history for this {{ formatCategoryLabel(row.category_code) }} product. Every scrape is stored, so this view grows more useful over time.</p>
+          <div class="mb-5 flex items-center gap-2.5">
+            <span
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+              :style="{ backgroundColor: bankColor(bank?.displayName ?? row.bank_name) }"
+            >{{ bankInitial(bank?.displayName ?? row.bank_name) }}</span>
+            <NuxtLink v-if="bank" :to="`/banks/${bank.slug}`" class="text-sm font-semibold text-muted hover:text-primary">{{ bank.displayName }}</NuxtLink>
+          </div>
+          <h1 class="text-[26px] font-bold text-navy">{{ fmtTenure(row.tenure_value ?? 0) }} Fixed Deposit</h1>
+          <span class="mt-2 inline-block rounded-pill bg-badge-bg px-3 py-1 text-xs font-bold text-primary">Fixed Deposit</span>
+
+          <section class="mt-5 rounded-[16px] border border-card-border bg-card p-5 shadow-sm sm:p-7">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 class="text-lg font-bold text-navy">Rate History</h2>
+              <div class="flex gap-1 rounded-lg bg-page p-1">
+                <button
+                  v-for="r in RANGE_OPTIONS"
+                  :key="r"
+                  type="button"
+                  class="rounded-md px-3 py-1 text-xs font-bold transition"
+                  :class="activeRange === r ? 'bg-primary text-white' : 'text-muted hover:text-navy'"
+                  @click="activeRange = r"
+                >
+                  {{ r }}
+                </button>
+              </div>
             </div>
-            <div class="rate-box">
-              <p class="rate-label">Current Rate</p>
-              <p class="rate-value">{{ row.interest_rate.toFixed(2) }}% <span class="unit">p.a.</span></p>
+
+            <RateTrendChart v-if="chartPoints.length > 1" :points="chartPoints" large />
+            <div v-else class="rounded-lg border border-dashed border-card-border p-6 text-center">
+              <p class="text-sm font-bold text-navy">Only {{ chartPoints.length }} verified reading{{ chartPoints.length === 1 ? '' : 's' }} so far.</p>
+              <p class="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted">
+                History builds as more scrapes complete. Scrapes run four times daily (around 3:15am, 9:15am, 3:15pm, and 9:15pm Sri Lanka time) — every scrape is stored, never overwritten.
+              </p>
             </div>
           </section>
 
-          <section class="panel">
-            <h2>Rate Trend</h2>
-            <RateTrendChart v-if="chartPoints.length > 1" :points="chartPoints" />
-            <div v-else class="trend-empty">
-              <p><strong>Not enough history yet for a trend chart.</strong></p>
-              <p>Only one scrape has been recorded for this product so far. Scrapes run four times daily (around 3:15am, 9:15am, 3:15pm, and 9:15pm Sri Lanka time) — a chart will appear here once at least two data points exist, since every scrape is stored rather than overwritten.</p>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h2>Recorded Data Points</h2>
-            <div class="table-wrap">
-              <table>
+          <section class="mt-4 rounded-[16px] border border-card-border bg-card p-5 shadow-sm sm:p-7">
+            <p class="mb-3 text-xs font-bold uppercase tracking-wide text-muted">All Recorded Changes</p>
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[520px] text-sm">
                 <thead>
-                  <tr>
-                    <th>Scraped At</th>
-                    <th>Rate</th>
-                    <th>Source</th>
+                  <tr class="border-b border-card-border text-left text-[11px] uppercase tracking-wide text-muted">
+                    <th class="pb-2 font-semibold">Date</th>
+                    <th class="pb-2 font-semibold">Rate</th>
+                    <th class="pb-2 font-semibold">Change</th>
+                    <th class="pb-2 font-semibold">Source</th>
+                    <th class="pb-2 font-semibold">Verification</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="h in (historyDesc.length ? historyDesc : [row])" :key="h.id">
-                    <td>{{ fmtDate(h.scraped_at) }}</td>
-                    <td><strong>{{ h.interest_rate.toFixed(2) }}%</strong></td>
-                    <td>
-                      <a v-if="h.source_url" :href="h.source_url" target="_blank" rel="noopener">Official page &rarr;</a>
-                      <span v-else class="muted">&mdash;</span>
+                  <tr v-for="(h, i) in historyDesc" :key="h.id" class="border-b border-card-border last:border-none">
+                    <td class="py-2.5 text-muted">{{ fmtDate(h.scraped_at) }}</td>
+                    <td class="py-2.5 font-bold text-navy">{{ h.interest_rate.toFixed(2) }}%</td>
+                    <td class="py-2.5">
+                      <span v-if="changesDesc[i].dir === 'up'" class="font-semibold text-emerald-600">&uarr; {{ changesDesc[i].amount.toFixed(2) }}%</span>
+                      <span v-else-if="changesDesc[i].dir === 'down'" class="font-semibold text-red-600">&darr; {{ changesDesc[i].amount.toFixed(2) }}%</span>
+                      <span v-else class="text-muted">&mdash;</span>
+                    </td>
+                    <td class="py-2.5">
+                      <a v-if="h.source_url" :href="h.source_url" target="_blank" rel="noopener" class="font-semibold text-primary hover:underline">Official page &rarr;</a>
+                      <span v-else class="text-muted">&mdash;</span>
+                    </td>
+                    <td class="py-2.5">
+                      <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">&#10003; Verified</span>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </section>
+
+          <div class="mt-4 text-center">
+            <NuxtLink :to="reportUrl" class="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-primary">
+              <span>&#9873;</span> Report Incorrect Information
+            </NuxtLink>
+          </div>
         </template>
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
-
-<style scoped>
-.wrap {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-main {
-  padding: 0.5rem 0 1rem;
-}
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.82rem;
-  color: var(--muted);
-  margin: 1.3rem 0 1.1rem;
-  flex-wrap: wrap;
-}
-.breadcrumb a {
-  color: var(--muted);
-  text-decoration: none;
-}
-.breadcrumb a:hover {
-  color: var(--accent);
-}
-.breadcrumb span:last-child {
-  color: var(--text);
-  font-weight: 600;
-}
-.empty {
-  padding: 2.5rem;
-  text-align: center;
-  color: var(--muted);
-}
-.empty a {
-  display: block;
-  margin-top: 0.6rem;
-  color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.header-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.4rem 1.6rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.2rem;
-}
-.header-card h1 {
-  margin: 0 0 0.4rem;
-  font-size: 1.3rem;
-  font-weight: 800;
-}
-.sub {
-  margin: 0;
-  max-width: 520px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-.rate-box {
-  text-align: right;
-}
-.rate-label {
-  margin: 0 0 0.2rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-}
-.rate-value {
-  margin: 0;
-  font-size: 1.7rem;
-  font-weight: 800;
-  color: var(--accent);
-}
-.rate-value .unit {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.2rem 1.3rem;
-  margin-bottom: 1.2rem;
-}
-.panel h2 {
-  margin: 0 0 0.8rem;
-  font-size: 1rem;
-  font-weight: 700;
-}
-.trend-empty {
-  background: var(--bg);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
-}
-.trend-empty p {
-  margin: 0 0 0.4rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-  max-width: 480px;
-  margin-left: auto;
-  margin-right: auto;
-}
-.trend-empty p:last-child {
-  margin-bottom: 0;
-}
-
-.table-wrap {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 400px;
-}
-th,
-td {
-  padding: 0.65rem 0.9rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.85rem;
-}
-th {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
-}
-tbody tr:last-child td {
-  border-bottom: none;
-}
-td a {
-  color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
-}
-td a:hover {
-  text-decoration: underline;
-}
-.muted {
-  color: var(--muted);
-}
-</style>

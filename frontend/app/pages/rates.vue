@@ -112,12 +112,10 @@ useHead({ title: 'Compare Rates — FindRate LK' })
 
 <template>
   <div>
+    <AppHeader />
+
     <header class="page-header">
       <div class="wrap">
-        <div class="header-top">
-          <NuxtLink class="back" to="/">&larr; Back to home</NuxtLink>
-          <ThemeToggle />
-        </div>
         <h1>FindRate LK</h1>
         <p>Fixed Deposit, Savings, and Loan rates across Sri Lankan banks</p>
       </div>
@@ -151,9 +149,11 @@ useHead({ title: 'Compare Rates — FindRate LK' })
       />
     </main>
 
-    <footer class="page-footer wrap">
+    <p class="page-footer wrap">
       Rates are as published by each bank at last scrape time and may not reflect current promotional offers.
-    </footer>
+    </p>
+
+    <AppFooter />
   </div>
 </template>
 

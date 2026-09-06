@@ -2,6 +2,14 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  modules: ['@nuxtjs/tailwindcss'],
+  css: ['~/assets/css/tailwind.css'],
+
+  // Without this, components under subfolders (components/home/,
+  // components/layout/) auto-register with a folder-name prefix
+  // (<HomeHeroSection> instead of <HeroSection>) — pathPrefix: false
+  // keeps every component's bare filename as its tag, folders or not.
+  components: [{ path: '~/components', pathPrefix: false }],
 
   app: {
     head: {
@@ -54,7 +62,10 @@ export default defineNuxtConfig({
       // useful once deployed) — without this, the static-site crawler
       // treats it as an internal page to prerender and fails, since that
       // route only exists on the Go server, not in this static build.
-      ignore: ['/api']
+      // /admin is excluded too — nothing on the public site links there,
+      // but it's a real auth boundary, so it's excluded explicitly rather
+      // than relying on the crawler simply never finding it.
+      ignore: ['/api', '/admin']
     },
     // `nuxt generate` writes the static build straight into ../web, which
     // cmd/api/main.go serves unchanged via http.FileServer(http.Dir("web")) —

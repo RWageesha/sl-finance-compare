@@ -4,10 +4,13 @@ import "time"
 
 // Bank represents a financial institution whose products are tracked.
 type Bank struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-	Code string `json:"code"`
-	Slug string `json:"slug,omitempty"`
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Code     string `json:"code"`
+	Slug     string `json:"slug,omitempty"`
+	Status   string `json:"status,omitempty"`    // 'active' | 'inactive' — admin-managed
+	BankType string `json:"bank_type,omitempty"` // admin-managed
+	Website  string `json:"website,omitempty"`   // admin-managed
 }
 
 // ProductCategory is a node in the normalized product taxonomy (e.g.
@@ -56,28 +59,77 @@ type ProductRate struct {
 	SourceURL    string    `json:"source_url,omitempty"`
 	Confidence   string    `json:"confidence,omitempty"`
 	ScrapedAt    time.Time `json:"scraped_at"`
+	// VerificationStatus is admin-review state ('pending' | 'verified' |
+	// 'rejected') — it does NOT gate public display: GetLatestRates keeps
+	// serving the newest row regardless, so this is a review/audit lane
+	// alongside the live site, not a publish gate.
+	VerificationStatus string `json:"verification_status,omitempty"`
 }
 
 // DataSource identifies one bank/page combination a scraper fetches from,
 // so ScrapeRun records have something to attach to.
 type DataSource struct {
-	ID        int64  `json:"id"`
-	BankID    int64  `json:"bank_id"`
-	Label     string `json:"label"`
-	SourceURL string `json:"source_url"`
+	ID         int64  `json:"id"`
+	BankID     int64  `json:"bank_id"`
+	Label      string `json:"label"`
+	SourceURL  string `json:"source_url"`
+	Status     string `json:"status,omitempty"`      // 'active' | 'disabled'
+	SourceType string `json:"source_type,omitempty"` // 'HTML' | 'PDF' | 'API'
 }
 
 // ScrapeRun records the outcome of one scrape attempt against a
 // DataSource, for basic operational visibility (not a verification/admin
 // workflow — just "did the last run against this source succeed").
 type ScrapeRun struct {
-	ID           int64
-	SourceID     int64
-	StartedAt    time.Time
-	CompletedAt  *time.Time
-	Status       string // success | partial | failed
-	RecordsFound int
-	ErrorMessage string
+	ID           int64      `json:"id"`
+	SourceID     int64      `json:"source_id"`
+	StartedAt    time.Time  `json:"started_at"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+	Status       string     `json:"status"` // success | partial | failed
+	RecordsFound int        `json:"records_found"`
+	ErrorMessage string     `json:"error_message,omitempty"`
+}
+
+// AdminUser is a member of the FindRate LK admin team.
+type AdminUser struct {
+	ID           int64      `json:"id"`
+	Username     string     `json:"username"`
+	Email        string     `json:"email"`
+	PasswordHash string     `json:"-"`
+	Role         string     `json:"role"`   // 'super_admin' | 'admin' | 'editor' | 'viewer'
+	Status       string     `json:"status"` // 'active' | 'disabled'
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+}
+
+// AuditLog is one accountability record for an admin action.
+type AuditLog struct {
+	ID            int64     `json:"id"`
+	AdminID       *int64    `json:"admin_id,omitempty"`
+	AdminUsername string    `json:"admin_username"`
+	Action        string    `json:"action"`
+	RecordRef     string    `json:"record_ref"`
+	OldValue      string    `json:"old_value,omitempty"`
+	NewValue      string    `json:"new_value,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// UserReport is a correction submitted through the public site's Report
+// Issue form.
+type UserReport struct {
+	ID            int64      `json:"id"`
+	BankName      string     `json:"bank_name"`
+	ProductLabel  string     `json:"product_label"`
+	IssueType     string     `json:"issue_type"`
+	CurrentValue  string     `json:"current_value,omitempty"`
+	CorrectValue  string     `json:"correct_value"`
+	SourceURL     string     `json:"source_url"`
+	Description   string     `json:"description,omitempty"`
+	Status        string     `json:"status"` // 'pending' | 'resolved' | 'rejected'
+	CreatedAt     time.Time  `json:"created_at"`
+	ResolvedAt    *time.Time `json:"resolved_at,omitempty"`
+	ResolvedByID  *int64     `json:"resolved_by,omitempty"`
 }
 
 // RateType distinguishes between different fixed deposit rate categories.

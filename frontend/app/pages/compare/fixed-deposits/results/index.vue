@@ -45,7 +45,7 @@ function detailHref(r: ProductRate): string | null {
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
     <main>
       <div class="wrap">
@@ -109,7 +109,7 @@ function detailHref(r: ProductRate): string | null {
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
 

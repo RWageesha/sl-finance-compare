@@ -57,7 +57,7 @@ const columns = computed<Column[]>(() => {
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
     <main>
       <div class="wrap">
@@ -137,7 +137,7 @@ const columns = computed<Column[]>(() => {
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
 

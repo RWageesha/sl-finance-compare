@@ -85,7 +85,7 @@ const maxBar = computed(() => Math.max(...growthBars.value, 1))
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
     <main>
       <div class="wrap">
@@ -195,12 +195,12 @@ const maxBar = computed(() => Math.max(...growthBars.value, 1))
 
         <div class="cta-bar">
           <span>Rates look competitive?</span>
-          <NuxtLink to="/compare/fixed-deposits">Compare FD rates from all banks in Sri Lanka &rarr;</NuxtLink>
+          <NuxtLink to="/products/fixed-deposits">Compare FD rates from all banks in Sri Lanka &rarr;</NuxtLink>
         </div>
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
 

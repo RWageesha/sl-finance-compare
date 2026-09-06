@@ -32,7 +32,7 @@ function productLabel(r: ProductRate): string {
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
     <main>
       <div class="wrap">
@@ -87,7 +87,7 @@ function productLabel(r: ProductRate): string {
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
 

@@ -60,7 +60,9 @@ func run() error {
 	mux.HandleFunc("GET /api/v1/savings-rates", handleSavingsRates(database))
 	mux.HandleFunc("GET /api/v1/loan-rates", handleLoanRates(database))
 	mux.HandleFunc("GET /api/v1/rate-history", handleRateHistory(database))
+	mux.HandleFunc("POST /api/v1/user-reports", handlePublicUserReportCreate(database))
 	mux.HandleFunc("GET /healthz", handleHealthz)
+	registerAdminRoutes(mux, database)
 	mux.Handle("/", spaFileServer{root: "web", fallback: "200.html"})
 
 	srv := &http.Server{

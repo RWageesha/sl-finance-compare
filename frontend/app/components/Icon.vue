@@ -18,6 +18,14 @@ defineProps<{
     | 'moon'
     | 'refresh'
     | 'chevron-down'
+    | 'check'
+    | 'menu'
+    | 'close'
+    | 'database'
+    | 'tag'
+    | 'flag'
+    | 'list'
+    | 'gear'
 }>()
 </script>
 
@@ -110,5 +118,45 @@ defineProps<{
       <polyline points="3,21 3,16 8,16" />
     </g>
     <polyline v-else-if="name === 'chevron-down'" points="6,9 12,15 18,9" />
+    <polyline v-else-if="name === 'check'" points="20,6 9,17 4,12" />
+    <g v-else-if="name === 'menu'">
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </g>
+    <g v-else-if="name === 'close'">
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </g>
+    <!-- Admin sidebar: Data Sources -->
+    <g v-else-if="name === 'database'">
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+      <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+    </g>
+    <!-- Admin sidebar: Products -->
+    <g v-else-if="name === 'tag'">
+      <path d="M20.6 12.6 12.7 20.5a2 2 0 0 1-2.8 0l-6.4-6.4a2 2 0 0 1 0-2.8L11.4 3.3a2 2 0 0 1 1.4-.6H19a2 2 0 0 1 2 2v6.5a2 2 0 0 1-.4 1.8Z" />
+      <circle cx="16" cy="8" r="1.5" />
+    </g>
+    <!-- Admin sidebar: User Reports -->
+    <g v-else-if="name === 'flag'">
+      <path d="M5 21V4" />
+      <path d="M5 4h13l-3 4.5L18 13H5" />
+    </g>
+    <!-- Admin sidebar: Audit Logs -->
+    <g v-else-if="name === 'list'">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </g>
+    <!-- Admin sidebar: Settings -->
+    <g v-else-if="name === 'gear'">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </g>
   </svg>
 </template>

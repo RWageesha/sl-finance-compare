@@ -50,7 +50,7 @@ function fmtLkr(n: number) {
     <div v-if="result !== null" class="result">
       <p class="result-label">Estimated Maturity Value</p>
       <p class="result-value">{{ fmtLkr(result) }}</p>
-      <NuxtLink to="/compare/fixed-deposits" @click="emit('close')">See full calculator &amp; compare banks &rarr;</NuxtLink>
+      <NuxtLink to="/products/fixed-deposits" @click="emit('close')">See full calculator &amp; compare banks &rarr;</NuxtLink>
     </div>
   </CalculatorModal>
 </template>

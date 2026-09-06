@@ -27,6 +27,17 @@ export function fmtRelativeDate(iso: string): string {
   return `${days} day${days === 1 ? '' : 's'} ago`
 }
 
+// Inverse of fmtTenure-ish: turns a dropdown label like "12 Months" or
+// "3 Years" back into a month count, for the Compare pages' tenure filter
+// (whose options are display labels, but the maturity/EMI math needs
+// months). Returns 0 if the label doesn't parse.
+export function parseTenureLabelToMonths(label: string): number {
+  const m = label.match(/(\d+)\s*(month|year)/i)
+  if (!m) return 0
+  const n = Number(m[1])
+  return m[2].toLowerCase() === 'year' ? n * 12 : n
+}
+
 export function fmtTenure(months: number): string {
   if (months % 12 === 0 && months >= 12) {
     const years = months / 12

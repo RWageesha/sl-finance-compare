@@ -40,6 +40,7 @@ function updatedLabel(bank: DirectoryBank): string {
 const searchQuery = ref('')
 const typeFilter = ref('')
 const productFilter = ref<'' | 'fd' | 'savings' | 'loans'>('')
+const sortBy = ref('Name (A-Z)')
 
 const filteredBanks = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
@@ -56,11 +57,28 @@ const filteredBanks = computed(() => {
     return true
   })
 })
+
+const sortedBanks = computed(() => {
+  const banks = filteredBanks.value.slice()
+  if (sortBy.value === 'Name (A-Z)') banks.sort((a, b) => a.displayName.localeCompare(b.displayName))
+  else if (sortBy.value === 'Name (Z-A)') banks.sort((a, b) => b.displayName.localeCompare(a.displayName))
+  else if (sortBy.value === 'Most Products Tracked') banks.sort((a, b) => statsFor(b).productCount - statsFor(a).productCount)
+  return banks
+})
+
+const PAGE_SIZE = 6
+const currentPage = ref(1)
+const pageCount = computed(() => Math.max(1, Math.ceil(sortedBanks.value.length / PAGE_SIZE)))
+const pagedBanks = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return sortedBanks.value.slice(start, start + PAGE_SIZE)
+})
+watch([searchQuery, typeFilter, productFilter, sortBy], () => { currentPage.value = 1 })
 </script>
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
     <main>
       <div class="wrap">
@@ -107,11 +125,19 @@ const filteredBanks = computed(() => {
               <option value="loans">Loans</option>
             </select>
           </div>
+          <div class="filter-select">
+            <Icon name="refresh" />
+            <select v-model="sortBy">
+              <option>Name (A-Z)</option>
+              <option>Name (Z-A)</option>
+              <option>Most Products Tracked</option>
+            </select>
+          </div>
         </div>
 
         <p v-if="filteredBanks.length === 0" class="no-results">No banks match your filters.</p>
         <div v-else class="bank-grid">
-          <div v-for="bank in filteredBanks" :key="bank.slug" class="bank-card" :class="{ untracked: !bank.tracked }">
+          <div v-for="bank in pagedBanks" :key="bank.slug" class="bank-card" :class="{ untracked: !bank.tracked }">
             <div class="bank-icon"><BankLogo :bank="bank" /></div>
             <h3>{{ bank.displayName }}</h3>
             <p class="bank-type">{{ bank.type }}</p>
@@ -134,10 +160,16 @@ const filteredBanks = computed(() => {
             </div>
           </div>
         </div>
+
+        <div v-if="pageCount > 1" class="pager">
+          <button type="button" class="pager-btn" :disabled="currentPage === 1" @click="currentPage--">&larr; Previous</button>
+          <span class="pager-status">Page {{ currentPage }} of {{ pageCount }}</span>
+          <button type="button" class="pager-btn" :disabled="currentPage === pageCount" @click="currentPage++">Next &rarr;</button>
+        </div>
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
 
@@ -441,5 +473,36 @@ main {
 }
 .view-btn:hover {
   filter: brightness(0.96);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0 0 2.5rem;
+}
+.pager-btn {
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pager-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pager-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pager-status {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
 }
 </style>

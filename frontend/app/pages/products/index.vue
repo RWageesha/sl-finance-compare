@@ -42,8 +42,8 @@ const ROUTES: { test: RegExp; href: string }[] = [
   { test: /vehicle|lease/, href: '/rates?tab=loans&category=LEASE' },
   { test: /gold|pawn/, href: '/compare/gold-loans' },
   { test: /loan/, href: '/rates?tab=loans' },
-  { test: /saving/, href: '/compare/savings' },
-  { test: /fixed deposit|\bfd\b|deposit/, href: '/compare/fixed-deposits' }
+  { test: /saving/, href: '/compare/savings-accounts' },
+  { test: /fixed deposit|\bfd\b|deposit/, href: '/products/fixed-deposits' }
 ]
 const searchQuery = ref('')
 function onSearch() {
@@ -59,7 +59,7 @@ function onSearch() {
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
     <main>
       <div class="wrap">
@@ -106,7 +106,7 @@ function onSearch() {
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
 

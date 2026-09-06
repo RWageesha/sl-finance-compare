@@ -11,7 +11,7 @@ const TABS = [
   { id: 'housing-loans', label: 'Housing Loans', href: '/compare/housing-loans' },
   { id: 'personal-loans', label: 'Personal Loans', href: '/compare/personal-loans' },
   { id: 'gold-loans', label: 'Gold Loans', href: '/compare/gold-loans' },
-  { id: 'savings', label: 'Savings Accounts', href: '/compare/savings' }
+  { id: 'savings', label: 'Savings Accounts', href: '/compare/savings-accounts' }
 ] as const
 </script>
 

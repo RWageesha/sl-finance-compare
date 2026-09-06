@@ -97,13 +97,28 @@ resolving/creating the right category and product rows along the way.
    psql "$DATABASE_URL" -f migrations/002_seed.sql
    psql "$DATABASE_URL" -f migrations/003_savings_and_loans.sql
    psql "$DATABASE_URL" -f migrations/004_normalized_schema.sql
+   psql "$DATABASE_URL" -f migrations/005_admin_auth.sql
    ```
 
    Migration 004 replaces `fixed_deposit_rates`/`savings_rates`/
    `loan_rates` (from 001/003) with the normalized schema above — it drops
    those three tables, so this is only safe to run against a database
    whose scraped data you're fine losing (the next scrape run repopulates
-   everything anyway).
+   everything anyway). Migration 005 adds the admin panel's auth tables
+   (`admin_users`, `admin_sessions`, `audit_logs`, `user_reports`) plus a
+   few admin-only columns on the existing tables — it's additive and safe
+   to run on a database with real scraped data already in it.
+
+5. Create the initial super admin account (one-time — the command
+   refuses to run if a super_admin already exists):
+
+   ```sh
+   SEED_ADMIN_USERNAME=youradmin SEED_ADMIN_EMAIL=you@example.com SEED_ADMIN_PASSWORD=a-strong-password go run ./cmd/seed-admin
+   ```
+
+   Log in at `/admin/login` with those credentials, then change the
+   password from Settings. Never commit real values for these — only
+   `.env.example` is tracked; `.env` is gitignored.
 
 ## Running the scraper
 
@@ -218,3 +233,68 @@ psql "$DATABASE_URL" -c "SELECT c.code, count(*) FROM product_rates r JOIN produ
 psql "$DATABASE_URL" -c "SELECT b.code, p.name, r.tenure_value, r.tenure_label, r.rate_label, r.interest_rate FROM product_rates r JOIN products p ON p.id = r.product_id JOIN banks b ON b.id = p.bank_id ORDER BY r.scraped_at DESC LIMIT 20;"
 psql "$DATABASE_URL" -c "SELECT ds.label, sr.status, sr.records_found, sr.error_message FROM scrape_runs sr JOIN data_sources ds ON ds.id = sr.source_id ORDER BY sr.id DESC LIMIT 20;"
 ```
+
+## Deploying to Render + Supabase
+
+This is a single deployable service: the Go binary serves both the API
+and the prerendered static site (including `/admin`) from one process,
+so there's one Render web service and one Supabase Postgres database —
+no separate frontend host, no separate worker.
+
+**1. Create the Supabase database**
+
+- Create a project at [supabase.com](https://supabase.com).
+- Once provisioned, go to **Project Settings → Database → Connection
+  string** and copy the **direct connection** (port 5432), not the
+  pooler/pgbouncer one on port 6543 — pgx's extended query protocol
+  doesn't play well with pgbouncer's transaction pooling mode without
+  extra config, and this project's traffic doesn't need pgbouncer's
+  concurrency benefits anyway. It looks like:
+
+  ```
+  postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+  ```
+
+- Apply the migrations against it, in order, from your machine (append
+  `?sslmode=require` — Supabase requires SSL):
+
+  ```sh
+  export DATABASE_URL="postgresql://postgres:...@db.....supabase.co:5432/postgres?sslmode=require"
+  psql "$DATABASE_URL" -f migrations/001_init.sql
+  psql "$DATABASE_URL" -f migrations/002_seed.sql
+  psql "$DATABASE_URL" -f migrations/003_savings_and_loans.sql
+  psql "$DATABASE_URL" -f migrations/004_normalized_schema.sql
+  psql "$DATABASE_URL" -f migrations/005_admin_auth.sql
+  ```
+
+- Seed your real super admin (pick your own values — never reuse a
+  local test password in production):
+
+  ```sh
+  SEED_ADMIN_USERNAME=... SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=... go run ./cmd/seed-admin
+  ```
+
+**2. Deploy the Go service on Render**
+
+- In the Render dashboard: **New → Blueprint**, connect the
+  `RWageesha/sl-finance-compare` GitHub repo. Render reads `render.yaml`
+  at the repo root and provisions the `findrate-lk` web service
+  automatically.
+- On first deploy, Render will prompt for `DATABASE_URL` (it's declared
+  `sync: false` in `render.yaml` so it's never committed) — paste the
+  same Supabase connection string from step 1.
+- Render injects `PORT` automatically; `cmd/api/main.go` already binds
+  to it, no extra config needed.
+- Once live, the whole site (public pages, the API, and `/admin`) is
+  served from the one Render URL — e.g.
+  `https://findrate-lk.onrender.com/admin/login`.
+
+**3. Keep the scraper running**
+
+The Python scraper (`scraper/`) is a separate concern from this
+service — it writes directly to Postgres and isn't invoked by the Go
+API in production (only in local dev, via the admin panel's "Run
+Manual"/"Run All Scrapers" buttons — see their code comments). Point its
+own `DATABASE_URL` at the same Supabase database, and schedule it
+however you're already running it (GitHub Actions manual-dispatch or a
+Render Cron Job) — nothing about this deploy changes that setup.

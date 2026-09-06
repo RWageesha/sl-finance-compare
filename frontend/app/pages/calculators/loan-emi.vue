@@ -72,7 +72,7 @@ const principalShare = computed(() => (totalPayable.value > 0 ? (principal.value
 
 <template>
   <div>
-    <SiteNav />
+    <AppHeader />
 
     <main>
       <div class="wrap">
@@ -186,7 +186,7 @@ const principalShare = computed(() => (totalPayable.value > 0 ? (principal.value
       </div>
     </main>
 
-    <SiteFooter />
+    <AppFooter />
   </div>
 </template>
 

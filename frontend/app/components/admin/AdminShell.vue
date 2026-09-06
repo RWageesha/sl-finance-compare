@@ -25,7 +25,7 @@ const scraping = ref<{ status: string }[]>([])
 onMounted(async () => {
   try {
     const res = await $fetch<{ scraping: { status: string }[] }>('/api/v1/admin/dashboard', { credentials: 'include' })
-    scraping.value = res.scraping
+    scraping.value = res.scraping ?? []
   } catch {
     scraping.value = []
   }

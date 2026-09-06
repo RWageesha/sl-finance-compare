@@ -72,7 +72,7 @@ func (d *DB) ListAdminUsers(ctx context.Context) ([]models.AdminUser, error) {
 		return nil, fmt.Errorf("db: list admin users: %w", err)
 	}
 	defer rows.Close()
-	var out []models.AdminUser
+	out := []models.AdminUser{}
 	for rows.Next() {
 		a, err := scanAdminUser(rows)
 		if err != nil {
@@ -216,7 +216,7 @@ func (d *DB) ListAuditLogs(ctx context.Context, f AuditLogFilter) ([]models.Audi
 	}
 	defer rows.Close()
 
-	var out []models.AuditLog
+	out := []models.AuditLog{}
 	for rows.Next() {
 		var l models.AuditLog
 		var oldVal, newVal *string
@@ -245,7 +245,7 @@ func (d *DB) ListDistinctAuditAdmins(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []string
+	out := []string{}
 	for rows.Next() {
 		var s string
 		if err := rows.Scan(&s); err != nil {
@@ -302,7 +302,7 @@ func (d *DB) ListUserReports(ctx context.Context, f UserReportFilter) ([]models.
 		return nil, 0, fmt.Errorf("db: list user reports: %w", err)
 	}
 	defer rows.Close()
-	var out []models.UserReport
+	out := []models.UserReport{}
 	for rows.Next() {
 		var r models.UserReport
 		var curVal, desc *string

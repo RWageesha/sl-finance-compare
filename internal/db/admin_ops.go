@@ -82,7 +82,7 @@ func (d *DB) GetScrapingStatus(ctx context.Context) ([]ScrapingStatusRow, error)
 		return nil, fmt.Errorf("db: scraping status: %w", err)
 	}
 	defer rows.Close()
-	var out []ScrapingStatusRow
+	out := []ScrapingStatusRow{}
 	for rows.Next() {
 		var r ScrapingStatusRow
 		if err := rows.Scan(&r.BankName, &r.LastRun, &r.Status, &r.RecordsFound); err != nil {
@@ -104,7 +104,7 @@ type SystemAlert struct {
 // (warning), and the count of pending user reports (info). There is no
 // fabricated "system health" score here.
 func (d *DB) GetSystemAlerts(ctx context.Context) ([]SystemAlert, error) {
-	var alerts []SystemAlert
+	alerts := []SystemAlert{}
 
 	rows, err := d.pool.Query(ctx, `
 		SELECT b.name, latest.started_at, latest.error_message
@@ -209,7 +209,7 @@ func (d *DB) GetRecentRateChanges(ctx context.Context, limit int) ([]RateChangeR
 		return nil, fmt.Errorf("db: recent rate changes: %w", err)
 	}
 	defer rows.Close()
-	var out []RateChangeRow
+	out := []RateChangeRow{}
 	for rows.Next() {
 		var c RateChangeRow
 		if err := rows.Scan(&c.BankName, &c.ProductName, &c.OldRate, &c.NewRate, &c.RateID, &c.DetectedAt, &c.Status); err != nil {
@@ -269,7 +269,7 @@ func (d *DB) ListVerificationQueue(ctx context.Context, f VerificationFilter) ([
 		return nil, fmt.Errorf("db: verification queue: %w", err)
 	}
 	defer rows.Close()
-	var out []VerificationRow
+	out := []VerificationRow{}
 	for rows.Next() {
 		var v VerificationRow
 		var src *string
@@ -365,7 +365,7 @@ func (d *DB) ListRatesAdmin(ctx context.Context, f RateManagementFilter) ([]Rate
 		return nil, 0, fmt.Errorf("db: list rates: %w", err)
 	}
 	defer rows.Close()
-	var out []RateManagementRow
+	out := []RateManagementRow{}
 	for rows.Next() {
 		var r RateManagementRow
 		if err := rows.Scan(&r.RateID, &r.ProductID, &r.BankName, &r.ProductName, &r.TenureValue, &r.TenureLabel, &r.RateLabel, &r.CurrentRate, &r.EffectiveFrom, &r.Status, &r.LastChecked); err != nil {
@@ -414,7 +414,7 @@ func (d *DB) GetRateHistoryAdmin(ctx context.Context, productID int64, tenureVal
 		return nil, fmt.Errorf("db: rate history admin: %w", err)
 	}
 	defer rows.Close()
-	var out []RateHistoryAdminRow
+	out := []RateHistoryAdminRow{}
 	first := true
 	for rows.Next() {
 		var h RateHistoryAdminRow
@@ -485,7 +485,7 @@ func (d *DB) ListDataSources(ctx context.Context, f DataSourceFilter) ([]DataSou
 		return nil, fmt.Errorf("db: list data sources: %w", err)
 	}
 	defer rows.Close()
-	var out []DataSourceRow
+	out := []DataSourceRow{}
 	for rows.Next() {
 		var r DataSourceRow
 		var lastStatus *string
@@ -555,7 +555,7 @@ func (d *DB) ListScrapeRuns(ctx context.Context, limit int) ([]ScrapeJobRow, err
 		return nil, fmt.Errorf("db: list scrape runs: %w", err)
 	}
 	defer rows.Close()
-	var out []ScrapeJobRow
+	out := []ScrapeJobRow{}
 	for rows.Next() {
 		var r ScrapeJobRow
 		var errMsg *string
@@ -656,7 +656,7 @@ func (d *DB) ListBanksAdmin(ctx context.Context) ([]BankAdminRow, error) {
 		return nil, fmt.Errorf("db: list banks admin: %w", err)
 	}
 	defer rows.Close()
-	var out []BankAdminRow
+	out := []BankAdminRow{}
 	for rows.Next() {
 		var r BankAdminRow
 		var health *float64
@@ -729,7 +729,7 @@ func (d *DB) ListProductCategories(ctx context.Context) ([]ProductCategoryRow, e
 		return nil, fmt.Errorf("db: list product categories: %w", err)
 	}
 	defer rows.Close()
-	var out []ProductCategoryRow
+	out := []ProductCategoryRow{}
 	for rows.Next() {
 		var r ProductCategoryRow
 		if err := rows.Scan(&r.ID, &r.Code, &r.Name, &r.GroupName, &r.BankCount, &r.FieldCount); err != nil {
@@ -754,7 +754,7 @@ func (d *DB) ListBanksForCategory(ctx context.Context, categoryID int64) ([]Cate
 		return nil, fmt.Errorf("db: banks for category: %w", err)
 	}
 	defer rows.Close()
-	var out []CategoryBankRow
+	out := []CategoryBankRow{}
 	for rows.Next() {
 		var r CategoryBankRow
 		if err := rows.Scan(&r.BankName, &r.ProductName); err != nil {

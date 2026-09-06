@@ -24,9 +24,9 @@ async function load() {
   try {
     const res = await $fetch<{ stats: Stats; scraping: ScrapingRow[]; alerts: Alert[]; recent_changes: RateChange[] }>('/api/v1/admin/dashboard', { credentials: 'include' })
     stats.value = res.stats
-    scraping.value = res.scraping
-    alerts.value = res.alerts
-    recentChanges.value = res.recent_changes
+    scraping.value = res.scraping ?? []
+    alerts.value = res.alerts ?? []
+    recentChanges.value = res.recent_changes ?? []
   } catch {
     error.value = true
   } finally {

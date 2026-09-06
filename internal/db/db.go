@@ -176,7 +176,7 @@ func (d *DB) GetLatestRates(ctx context.Context, categoryGroup string) ([]models
 	}
 	defer rows.Close()
 
-	var out []models.ProductRate
+	out := []models.ProductRate{}
 	for rows.Next() {
 		var r models.ProductRate
 		var tenureUnit *string
@@ -236,7 +236,7 @@ func (d *DB) GetRateHistory(ctx context.Context, productID int64, tenureValue *i
 	}
 	defer rows.Close()
 
-	var out []models.ProductRate
+	out := []models.ProductRate{}
 	for rows.Next() {
 		var r models.ProductRate
 		var tenureUnit *string

@@ -25,6 +25,11 @@ export interface DirectoryBank {
    * here is just the bank's public brand mark — unrelated to whether we
    * track their rates, so untracked banks can have one too. */
   logoExt?: 'png' | 'jpeg' | 'svg'
+  /** A separate, icon-cropped variant at public/banks/<slug>-small.<ext>,
+   * used for small square avatars (Popular Banks cards, the bank
+   * directory grid) instead of scaling down the full logo. Not every
+   * bank has one — BankLogo falls back to logoExt when this is unset. */
+  logoSmallExt?: 'png' | 'jpeg' | 'svg'
 }
 
 export const BANK_TYPES = ['Commercial Bank', 'Savings Bank', 'Licensed Commercial Bank'] as const
@@ -38,7 +43,8 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     icon: 'bank',
     tracked: true,
     sourceUrl: 'https://www.hnb.lk/fixed-deposits-interest-rates',
-    logoExt: 'png'
+    logoExt: 'png',
+    logoSmallExt: 'png'
   },
   {
     slug: 'combank',
@@ -48,7 +54,8 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     icon: 'bank',
     tracked: true,
     sourceUrl: 'https://www.combank.lk/rates-tariff',
-    logoExt: 'png'
+    logoExt: 'png',
+    logoSmallExt: 'png'
   },
   {
     slug: 'boc',
@@ -59,8 +66,9 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     tracked: true,
     sourceUrl: 'https://www.boc.lk/rates-tariff',
     logoExt: 'jpeg'
+    // No -small variant provided for BOC — BankLogo falls back to logoExt.
   },
-  { slug: 'sampath', displayName: 'Sampath Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
+  { slug: 'sampath', displayName: 'Sampath Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
   {
     slug: 'ndb',
     apiName: 'National Development Bank',
@@ -69,15 +77,16 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     icon: 'bank',
     tracked: true,
     sourceUrl: 'https://www.ndbbank.com/rates/interest-rates-on-deposits',
-    logoExt: 'png'
+    logoExt: 'png',
+    logoSmallExt: 'png'
   },
-  { slug: 'seylan', displayName: 'Seylan Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
-  { slug: 'dfcc', displayName: 'DFCC Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
-  { slug: 'peoples', displayName: "People's Bank", type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
-  { slug: 'nsb', displayName: 'National Savings Bank (NSB)', type: 'Savings Bank', icon: 'savings', tracked: false, logoExt: 'png' },
-  { slug: 'panasia', displayName: 'Pan Asia Banking Corporation', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
-  { slug: 'union', displayName: 'Union Bank of Colombo', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png' },
-  { slug: 'amana', displayName: 'Amana Bank', type: 'Licensed Commercial Bank', icon: 'moon', tracked: false, logoExt: 'png' }
+  { slug: 'seylan', displayName: 'Seylan Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  { slug: 'dfcc', displayName: 'DFCC Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  { slug: 'peoples', displayName: "People's Bank", type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  { slug: 'nsb', displayName: 'National Savings Bank (NSB)', type: 'Savings Bank', icon: 'savings', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  { slug: 'panasia', displayName: 'Pan Asia Banking Corporation', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  { slug: 'union', displayName: 'Union Bank of Colombo', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  { slug: 'amana', displayName: 'Amana Bank', type: 'Licensed Commercial Bank', icon: 'moon', tracked: false, logoExt: 'png', logoSmallExt: 'png' }
 ]
 
 export function findDirectoryBank(slug: string): DirectoryBank | undefined {

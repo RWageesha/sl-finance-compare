@@ -40,16 +40,8 @@ const CALCULATORS = [
           </button>
         </div>
 
-        <!-- Placeholder illustration — no finance-illustration asset exists
-             in public/ yet; swap the inner div for an <img> once one is
-             provided. -->
-        <div class="flex min-h-[180px] items-center justify-center gap-4 rounded-card bg-gradient-to-br from-navy to-[#1e293b] lg:min-h-0">
-          <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-primary shadow-xl">
-            <Icon name="calculator" class="h-9 w-9" />
-          </div>
-          <div class="flex h-14 w-14 items-center justify-center self-end rounded-xl bg-white text-primary shadow-xl">
-            <Icon name="bar-chart" class="h-6 w-6" />
-          </div>
+        <div class="min-h-[180px] overflow-hidden rounded-card lg:min-h-0">
+          <img src="/hero/calculator-section.jpg" alt="" class="h-full w-full object-cover">
         </div>
       </div>
     </div>

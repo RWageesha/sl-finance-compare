@@ -2,12 +2,13 @@
 // Real logos already exist in public/banks/ (from the bank directory work
 // earlier in the project) — used directly rather than placeholders.
 const BANKS = [
+  // BOC has no icon-cropped -small variant, so it keeps the full logo.
   { name: 'Bank of Ceylon', logoSrc: '/banks/boc.jpeg', productCount: 34, slug: 'boc' },
-  { name: 'Commercial Bank', logoSrc: '/banks/combank.png', productCount: 28, slug: 'combank' },
-  { name: 'Sampath Bank', logoSrc: '/banks/sampath.png', productCount: 26, slug: 'sampath' },
-  { name: 'HNB', logoSrc: '/banks/hnb.png', productCount: 31, slug: 'hnb' },
-  { name: 'National Savings Bank', logoSrc: '/banks/nsb.png', productCount: 22, slug: 'nsb' },
-  { name: "People's Bank", logoSrc: '/banks/peoples.png', productCount: 19, slug: 'peoples' }
+  { name: 'Commercial Bank', logoSrc: '/banks/combank-small.png', productCount: 28, slug: 'combank' },
+  { name: 'Sampath Bank', logoSrc: '/banks/sampath-small.png', productCount: 26, slug: 'sampath' },
+  { name: 'HNB', logoSrc: '/banks/hnb-small.png', productCount: 31, slug: 'hnb' },
+  { name: 'National Savings Bank', logoSrc: '/banks/nsb-small.png', productCount: 22, slug: 'nsb' },
+  { name: "People's Bank", logoSrc: '/banks/peoples-small.png', productCount: 19, slug: 'peoples' }
 ]
 </script>
 
@@ -32,7 +33,7 @@ const BANKS = [
           :to="`/banks/${bank.slug}`"
           class="flex flex-col items-center rounded-card border border-card-border bg-card px-3 py-4 text-center transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md sm:px-4 sm:py-5"
         >
-          <span class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-card-border bg-white p-1.5">
+          <span class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-card-border bg-white p-1.5">
             <img :src="bank.logoSrc" :alt="`${bank.name} logo`" class="h-full w-full object-contain">
           </span>
           <span class="mt-3 text-[13px] font-bold leading-snug text-navy">{{ bank.name }}</span>

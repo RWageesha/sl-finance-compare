@@ -1,11 +1,8 @@
 <script setup lang="ts">
-// Chart "thumbnails" are icon glyphs on a gradient panel, same convention
-// as the existing CompareCard.vue — no chart-preview image asset exists
-// in the project yet.
 const COMPARISONS = [
-  { title: 'Fixed Deposit Rates', desc: 'Evaluation of HNB vs Commercial Bank 12-Month deposits.', href: '/compare/fixed-deposits', chart: 'bar-chart' as const, dark: false },
-  { title: 'Housing Loan Rates', desc: 'Base lending margins and administrative fees compared.', href: '/compare/housing-loans', chart: 'line-chart' as const, dark: true },
-  { title: 'Savings Account Rates', desc: 'Savings multipliers and cash withdrawal limits contrasted.', href: '/compare/savings-accounts', chart: 'bar-chart-alt' as const, dark: false }
+  { title: 'Fixed Deposit Rates', desc: 'Evaluation of HNB vs Commercial Bank 12-Month deposits.', href: '/compare/fixed-deposits', image: '/hero/fixed-deposit-card.jpg' },
+  { title: 'Housing Loan Rates', desc: 'Base lending margins and administrative fees compared.', href: '/compare/housing-loans', image: '/hero/housing-loan-card.jpg' },
+  { title: 'Savings Account Rates', desc: 'Savings multipliers and cash withdrawal limits contrasted.', href: '/compare/savings-accounts', image: '/hero/savings-account-card.jpg' }
 ]
 </script>
 
@@ -24,11 +21,8 @@ const COMPARISONS = [
           :key="c.title"
           class="overflow-hidden rounded-card border border-card-border bg-card shadow-sm"
         >
-          <div
-            class="flex h-[120px] items-center justify-center"
-            :class="c.dark ? 'bg-gradient-to-br from-navy to-[#1e293b] text-[#7fa8ff]' : 'bg-gradient-to-br from-page to-card-border text-primary'"
-          >
-            <Icon :name="c.chart" class="h-14 w-14 opacity-85" />
+          <div class="h-[120px]">
+            <img :src="c.image" alt="" class="h-full w-full object-cover">
           </div>
           <div class="p-[18px]">
             <h3 class="text-base font-bold text-navy">{{ c.title }}</h3>

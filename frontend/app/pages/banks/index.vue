@@ -138,7 +138,7 @@ watch([searchQuery, typeFilter, productFilter, sortBy], () => { currentPage.valu
         <p v-if="filteredBanks.length === 0" class="no-results">No banks match your filters.</p>
         <div v-else class="bank-grid">
           <div v-for="bank in pagedBanks" :key="bank.slug" class="bank-card" :class="{ untracked: !bank.tracked }">
-            <div class="bank-icon"><BankLogo :bank="bank" /></div>
+            <div class="bank-icon"><BankLogo :bank="bank" small /></div>
             <h3>{{ bank.displayName }}</h3>
             <p class="bank-type">{{ bank.type }}</p>
 

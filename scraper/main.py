@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 import normalize
 import validate
-from banks import boc, combank, hnb, ndb
+from banks import boc, combank, hnb, ndb, nsb
 from db import DB, ProductRate, ScrapeRun
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -288,6 +288,59 @@ def _scrape_ndb(db: DB) -> tuple[int, list[Exception]]:
     return attempted, errors
 
 
+def _scrape_nsb(db: DB) -> tuple[int, list[Exception]]:
+    """NSB publishes Fixed Deposit and Savings rates together on one
+    deposits page, and Loan rates on a separate lending page — two
+    fetches, three parses, same shape as combank/ndb. Returns
+    (sources_attempted, errors).
+    """
+    errors: list[Exception] = []
+    attempted = 0
+    bank_id = db.get_or_create_bank(nsb.BANK_NAME, nsb.BANK_CODE)
+
+    log.info("nsb: fetching deposit rates")
+    deposits_html = nsb.fetch_deposits_page()
+
+    def fd() -> int:
+        rows = nsb.parse_fixed_deposits(deposits_html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(nsb.BANK_NAME), db, bank_id, "nsb")
+        db.insert_product_rates(product_rates)
+        log.info("nsb: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def savings() -> int:
+        rows = nsb.parse_savings(deposits_html)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "nsb")
+        db.insert_product_rates(product_rates)
+        log.info("nsb: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, fn in (("nsb-fixed-deposits", fd), ("nsb-savings", savings)):
+        attempted += 1
+        err = _run_scrape(db, bank_id, label, nsb.DEPOSITS_URL, fn)
+        if err is not None:
+            log.warning("nsb: %s: %s", label, err)
+            errors.append(err)
+
+    log.info("nsb: fetching lending rates")
+
+    def loans() -> int:
+        html = nsb.fetch_lending_page()
+        rows = nsb.parse_loans(html)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "nsb")
+        db.insert_product_rates(product_rates)
+        log.info("nsb: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    attempted += 1
+    err = _run_scrape(db, bank_id, "nsb-loans", nsb.LENDING_URL, loans)
+    if err is not None:
+        log.warning("nsb: loans: %s", err)
+        errors.append(err)
+
+    return attempted, errors
+
+
 def run() -> tuple[int, list[Exception]]:
     """Returns (sources_attempted, errors) rather than just errors — a
     source here is one scrape target within a bank (e.g. "combank-loans"),
@@ -312,7 +365,7 @@ def run() -> tuple[int, list[Exception]]:
         # shouldn't block scraping the others, so run every scraper and
         # only report failure at the end (still surfacing every individual
         # error via log).
-        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc, _scrape_ndb):
+        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc, _scrape_ndb, _scrape_nsb):
             try:
                 attempted, bank_errors = scrape_bank(db)
                 total_attempted += attempted

@@ -1,15 +1,46 @@
 <script setup lang="ts">
 // Real logos already exist in public/banks/ (from the bank directory work
-// earlier in the project) — used directly rather than placeholders.
+// earlier in the project) — used directly rather than placeholders. Product
+// counts are computed from the live API (see onMounted below), never
+// hardcoded — a bank's real count changes every time its scraper runs.
+import { computeBankStats, DIRECTORY_BANKS } from '~/utils/bankDirectory'
+import type { TaggedRow } from '~/utils/bankDirectory'
+
 const BANKS = [
   // BOC has no icon-cropped -small variant, so it keeps the full logo.
-  { name: 'Bank of Ceylon', logoSrc: '/banks/boc.jpeg', productCount: 34, slug: 'boc' },
-  { name: 'Commercial Bank', logoSrc: '/banks/combank-small.png', productCount: 28, slug: 'combank' },
-  { name: 'Sampath Bank', logoSrc: '/banks/sampath-small.png', productCount: 26, slug: 'sampath' },
-  { name: 'HNB', logoSrc: '/banks/hnb-small.png', productCount: 31, slug: 'hnb' },
-  { name: 'National Savings Bank', logoSrc: '/banks/nsb-small.png', productCount: 22, slug: 'nsb' },
-  { name: "People's Bank", logoSrc: '/banks/peoples-small.png', productCount: 19, slug: 'peoples' }
+  { name: 'Bank of Ceylon', logoSrc: '/banks/boc.jpeg', slug: 'boc' },
+  { name: 'Commercial Bank', logoSrc: '/banks/combank-small.png', slug: 'combank' },
+  { name: 'Sampath Bank', logoSrc: '/banks/sampath-small.png', slug: 'sampath' },
+  { name: 'HNB', logoSrc: '/banks/hnb-small.png', slug: 'hnb' },
+  { name: 'National Savings Bank', logoSrc: '/banks/nsb-small.png', slug: 'nsb' },
+  { name: "People's Bank", logoSrc: '/banks/peoples-small.png', slug: 'peoples' }
 ]
+
+const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
+const allRows = ref<TaggedRow[]>([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    const [fd, savings, loans] = await Promise.all([
+      fetchFixedDeposits().catch(() => []),
+      fetchSavings().catch(() => []),
+      fetchLoans().catch(() => [])
+    ])
+    allRows.value = [
+      ...fd.map((r) => ({ ...r, kind: 'fd' as const })),
+      ...savings.map((r) => ({ ...r, kind: 'savings' as const })),
+      ...loans.map((r) => ({ ...r, kind: 'loans' as const }))
+    ]
+  } finally {
+    loading.value = false
+  }
+})
+
+function productCountFor(slug: string): number {
+  const apiName = DIRECTORY_BANKS.find((b) => b.slug === slug)?.apiName
+  return computeBankStats(allRows.value, apiName).productCount
+}
 </script>
 
 <template>
@@ -37,7 +68,7 @@ const BANKS = [
             <img :src="bank.logoSrc" :alt="`${bank.name} logo`" class="h-full w-full object-contain">
           </span>
           <span class="mt-3 text-[13px] font-bold leading-snug text-navy">{{ bank.name }}</span>
-          <span class="mt-1 text-xs text-muted">{{ bank.productCount }} products</span>
+          <span class="mt-1 text-xs text-muted">{{ loading ? '…' : `${productCountFor(bank.slug)} products` }}</span>
         </NuxtLink>
       </div>
     </div>

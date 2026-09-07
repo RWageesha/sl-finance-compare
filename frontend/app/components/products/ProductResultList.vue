@@ -88,7 +88,7 @@ watch(
                 <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />{{ row[col.key] }}
               </span>
 
-              <NuxtLink v-else-if="col.type === 'action'" :to="`/products/sample/${row.id}`" class="font-bold text-primary hover:underline">
+              <NuxtLink v-else-if="col.type === 'action'" :to="row.detailHref ?? `/products/sample/${row.id}`" class="font-bold text-primary hover:underline">
                 Details &rarr;
               </NuxtLink>
 
@@ -133,7 +133,7 @@ watch(
             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />{{ row[verifiedCol.key] }}
           </span>
           <span v-else />
-          <NuxtLink v-if="actionCol" :to="`/products/sample/${row.id}`" class="text-[13px] font-bold text-primary">Details &rarr;</NuxtLink>
+          <NuxtLink v-if="actionCol" :to="row.detailHref ?? `/products/sample/${row.id}`" class="text-[13px] font-bold text-primary">Details &rarr;</NuxtLink>
         </div>
       </div>
     </div>

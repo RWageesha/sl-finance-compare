@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { PRODUCT_TYPES } from '~/config/productTypes'
+import { realRowsFor, type Kind, type TaggedRow } from '~/utils/realProductRows'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -9,6 +10,33 @@ const compare = computed(() => config.value?.compare)
 useHead({
   title: computed(() => (compare.value ? `${compare.value.heading} — FindRate LK` : 'Compare page not found — FindRate LK'))
 })
+
+const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
+const allRows = ref<TaggedRow[]>([])
+const loading = ref(true)
+
+onMounted(async () => {
+  if (!config.value?.live) {
+    loading.value = false
+    return
+  }
+  try {
+    const [fd, savings, loans] = await Promise.all([
+      fetchFixedDeposits().catch(() => []),
+      fetchSavings().catch(() => []),
+      fetchLoans().catch(() => [])
+    ])
+    allRows.value = [
+      ...fd.map((r) => ({ ...r, kind: 'fd' as Kind })),
+      ...savings.map((r) => ({ ...r, kind: 'savings' as Kind })),
+      ...loans.map((r) => ({ ...r, kind: 'loans' as Kind }))
+    ]
+  } finally {
+    loading.value = false
+  }
+})
+
+const liveRows = computed(() => realRowsFor(slug.value, allRows.value))
 
 // --- Prefill from the query string (Bank Profile / Product Detail Compare
 // buttons) --- `route.query` is replaced (not mutated) on every
@@ -42,8 +70,6 @@ function defaultFilterValues(): Record<string, string> {
       const months = Number(q.tenure)
       const match = f.options?.find((o) => parseTenureLabelToMonths(o) === months)
       values[f.key] = match ?? f.options?.[0] ?? ''
-    } else if (f.key === 'payment' && q.payment && f.options?.includes(String(q.payment))) {
-      values[f.key] = String(q.payment)
     } else {
       values[f.key] = f.type === 'input' ? (f.placeholder ?? '') : (f.options?.[0] ?? '')
     }
@@ -64,32 +90,18 @@ const amount = computed(() => {
   return Number.isFinite(n) && n > 0 ? n : 1000000
 })
 const tenureMonths = computed(() => parseTenureLabelToMonths(filterValues.value.tenure ?? '') || 12)
-const paymentLabel = computed(() => (slug.value === 'fixed-deposits' ? filterValues.value.payment : undefined))
 
 const buttonLabel = computed(() => (compare.value ? (hasPrefill.value ? compare.value.updateLabel : compare.value.defaultLabel) : ''))
 
-// --- Filtering: only FD's payment and Savings' accountType/minBalance
-// dropdowns actually narrow the row list — amount/tenure are calculator
-// inputs (used above for the computed maturity/EMI column), not filters.
-function minBalanceInRange(raw: string, rangeLabel: string): boolean {
-  const amount = Number(raw.replace(/[^0-9]/g, ''))
-  if (rangeLabel === 'Under Rs. 5,000') return amount < 5000
-  if (rangeLabel === 'Rs. 5,000 – 50,000') return amount >= 5000 && amount <= 50000
-  if (rangeLabel === 'Above Rs. 50,000') return amount > 50000
-  return true
-}
+// --- Filtering: only Savings' Account Type dropdown actually narrows the
+// row list — amount/tenure are calculator inputs (used above for the
+// computed maturity/EMI column), not filters.
 const filteredRows = computed(() => {
   if (!compare.value) return []
-  return compare.value.rows.filter((row) => {
-    // FD's "Interest Payment" dropdown has no neutral "Any" option — it's
-    // a shared scenario label shown under every row (via paymentLabel
-    // below), not a row filter, so every FD row stays visible regardless
-    // of which payment frequency is selected.
+  return liveRows.value.filter((row) => {
     if (slug.value === 'savings-accounts') {
-      const accountType = filterValues.value.accountType
-      if (accountType && accountType !== 'Any' && row.category !== accountType) return false
-      const minBalance = filterValues.value.minBalance
-      if (minBalance && minBalance !== 'Any' && typeof row.minBalance === 'string' && !minBalanceInRange(row.minBalance, minBalance)) return false
+      const category = filterValues.value.category
+      if (category && category !== 'Any' && row.category !== category) return false
     }
     return true
   })
@@ -97,17 +109,11 @@ const filteredRows = computed(() => {
 
 const sortBy = ref('Highest Rate')
 function rowRateValue(row: (typeof filteredRows.value)[number]): number {
-  if (row.rateValue !== undefined) return row.rateValue
-  const n = Number.parseFloat(String(row.rate ?? ''))
-  return Number.isFinite(n) ? n : 0
+  return row.rateValue ?? 0
 }
 const sortedRows = computed(() => {
   const rows = filteredRows.value.slice()
   if (sortBy.value === 'Highest Rate') rows.sort((a, b) => rowRateValue(b) - rowRateValue(a))
-  else if (sortBy.value === 'Lowest Minimum') {
-    const minOf = (r: (typeof rows)[number]) => Number(String(r.minDeposit ?? r.minBalance ?? '').replace(/[^0-9]/g, '')) || Infinity
-    rows.sort((a, b) => minOf(a) - minOf(b))
-  }
   return rows
 })
 </script>
@@ -133,15 +139,15 @@ const sortedRows = computed(() => {
             />
           </div>
 
-          <p class="mt-4 text-sm font-semibold text-navy">{{ sortedRows.length }} Products Found</p>
+          <p class="mt-4 text-sm font-semibold text-navy">{{ loading ? 'Loading…' : `${sortedRows.length} Products Found` }}</p>
 
-          <div class="mt-3">
+          <p v-if="loading" class="mt-3 rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">Loading…</p>
+          <div v-else class="mt-3">
             <CompareResultList
               :columns="compare.columns"
               :rows="sortedRows"
               :amount="amount"
               :tenure-months="tenureMonths"
-              :payment-label="paymentLabel"
               :highlight="highlight"
             />
           </div>

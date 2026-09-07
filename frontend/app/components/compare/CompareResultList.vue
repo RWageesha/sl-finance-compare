@@ -136,7 +136,7 @@ watch(
                 <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />{{ row.verified }}
               </span>
 
-              <NuxtLink v-else-if="col.type === 'action'" :to="`/products/sample/${row.id}`" class="font-bold text-primary hover:underline">View Details &rarr;</NuxtLink>
+              <NuxtLink v-else-if="col.type === 'action'" :to="row.detailHref ?? `/products/sample/${row.id}`" class="font-bold text-primary hover:underline">View Details &rarr;</NuxtLink>
 
               <span v-else class="text-muted">{{ (row as Record<string, unknown>)[col.key] }}</span>
             </td>
@@ -185,7 +185,7 @@ watch(
             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />{{ row.verified }}
           </span>
           <span v-else />
-          <NuxtLink :to="`/products/sample/${row.id}`" class="text-[13px] font-bold text-primary">View Details &rarr;</NuxtLink>
+          <NuxtLink :to="row.detailHref ?? `/products/sample/${row.id}`" class="text-[13px] font-bold text-primary">View Details &rarr;</NuxtLink>
         </div>
       </div>
     </div>

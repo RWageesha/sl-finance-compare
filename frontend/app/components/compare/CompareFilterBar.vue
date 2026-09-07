@@ -57,7 +57,6 @@ const fieldClass = 'w-full rounded-lg border border-card-border bg-white px-3 py
           @change="emit('update:sortBy', ($event.target as HTMLSelectElement).value)"
         >
           <option>Highest Rate</option>
-          <option>Lowest Minimum</option>
         </select>
       </label>
     </div>

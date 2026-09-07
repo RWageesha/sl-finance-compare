@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { PRODUCT_TYPES } from '~/config/productTypes'
+import { realRowsFor, type Kind, type TaggedRow } from '~/utils/realProductRows'
+import { bankKey } from '~/utils/bankColors'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -9,40 +11,62 @@ useHead({
   title: computed(() => (config.value ? `${config.value.title} — FindRate LK` : 'Product type not found — FindRate LK'))
 })
 
+const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
+const allRows = ref<TaggedRow[]>([])
+const loading = ref(true)
+
+onMounted(async () => {
+  if (!config.value?.live) {
+    loading.value = false
+    return
+  }
+  try {
+    const [fd, savings, loans] = await Promise.all([
+      fetchFixedDeposits().catch(() => []),
+      fetchSavings().catch(() => []),
+      fetchLoans().catch(() => [])
+    ])
+    allRows.value = [
+      ...fd.map((r) => ({ ...r, kind: 'fd' as Kind })),
+      ...savings.map((r) => ({ ...r, kind: 'savings' as Kind })),
+      ...loans.map((r) => ({ ...r, kind: 'loans' as Kind }))
+    ]
+  } finally {
+    loading.value = false
+  }
+})
+
+const liveRows = computed(() => realRowsFor(slug.value, allRows.value))
+
 const filterValues = ref<Record<string, string>>({})
 function onFilterValues(v: Record<string, string>) {
   filterValues.value = v
 }
 watch(slug, () => { filterValues.value = {} })
 
-function parseRupees(s: string): number {
-  return Number(s.replace(/[^0-9]/g, '')) || 0
-}
-function inRange(raw: string, rangeLabel: string): boolean {
-  const amt = parseRupees(raw)
-  if (rangeLabel.startsWith('Under')) return amt < parseRupees(rangeLabel)
-  if (rangeLabel.startsWith('Above')) return amt > parseRupees(rangeLabel)
-  const [lo, hi] = rangeLabel.replace(/[^\d–-]/g, '').split(/[–-]/).map((n) => Number(n))
-  return amt >= lo && amt <= hi
-}
-
 const filteredRows = computed(() => {
   if (!config.value) return []
-  return config.value.rows.filter((row) => {
+  return liveRows.value.filter((row) => {
     for (const f of config.value!.filters) {
       const v = filterValues.value[f.key]
       if (!v || f.key === 'amount') continue
       if (f.type !== 'dropdown') {
         // Free-text (input/multiselect) fields — 'bank' is the only one
-        // in practice, matched as a case-insensitive substring.
-        const target = String(row[f.key] ?? (f.key === 'bank' ? row.bank : '')).toLowerCase()
+        // in practice. Real bank names are full legal names ("Hatton
+        // National Bank"), but people search by the common short form
+        // ("HNB") used everywhere else on the site — bankKey's short form
+        // is folded into the match target so both spellings work.
+        if (f.key === 'bank') {
+          const target = `${row.bank} ${bankKey(row.bank)}`.toLowerCase()
+          if (!target.includes(v.toLowerCase())) return false
+          continue
+        }
+        const target = String(row[f.key] ?? '').toLowerCase()
         if (!target.includes(v.toLowerCase())) return false
         continue
       }
       if (v === (f.options?.[0] ?? '')) continue // first option = "no filter"
-      if (f.key === 'accountType') { if (row.category !== v) return false; continue }
-      if (f.key === 'minBalance' && typeof row.minBalance === 'string') { if (!inRange(row.minBalance, v)) return false; continue }
-      if (f.key === 'annualFeeRange' && typeof row.annualFee === 'string') { if (!inRange(row.annualFee, v)) return false; continue }
+      if (f.key === 'tenure') { if (parseTenureLabelToMonths(v) !== row.tenureMonths) return false; continue }
       if (row[f.key] !== undefined && String(row[f.key]) !== v) return false
     }
     return true
@@ -51,16 +75,11 @@ const filteredRows = computed(() => {
 
 const sortBy = ref('Highest Rate')
 function rowRateValue(row: (typeof filteredRows.value)[number]): number {
-  const n = Number.parseFloat(String(row.rate ?? ''))
-  return Number.isFinite(n) ? n : 0
+  return row.rateValue ?? 0
 }
 const sortedRows = computed(() => {
   const rows = filteredRows.value.slice()
   if (sortBy.value === 'Highest Rate') rows.sort((a, b) => rowRateValue(b) - rowRateValue(a))
-  else if (sortBy.value === 'Lowest Minimum') {
-    const minOf = (r: (typeof rows)[number]) => Number(String(r.minDeposit ?? r.minBalance ?? '').replace(/[^0-9]/g, '')) || Infinity
-    rows.sort((a, b) => minOf(a) - minOf(b))
-  }
   return rows
 })
 </script>
@@ -82,25 +101,34 @@ const sortedRows = computed(() => {
 
           <ProductPageHeader :eyebrow="config.eyebrow" :title="config.title" :subtitle="config.subtitle" />
           <ProductSwitcher :active="config.slug" />
-          <FilterBar
-            :filters="config.filters"
-            :compare-label="config.compareLabel"
-            :compare-href="config.compareHref"
-            @update:values="onFilterValues"
-          />
 
-          <div class="mt-4 flex items-center justify-between">
-            <p class="text-sm font-semibold text-navy">{{ sortedRows.length }} Products Found</p>
-            <label class="inline-flex items-center gap-1.5 text-xs text-muted">
-              Sort by:
-              <select v-model="sortBy" class="rounded-lg border border-card-border bg-white px-2 py-1 text-xs text-navy">
-                <option>Highest Rate</option>
-                <option>Lowest Minimum</option>
-              </select>
-            </label>
-          </div>
+          <template v-if="!config.live">
+            <div class="mt-4 rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">
+              FindRate doesn't have a live data feed for {{ config.switcherLabel.toLowerCase() }} yet — it's listed here to show
+              the full shape of the market, but no bank's rates are tracked for this product type.
+            </div>
+          </template>
+          <template v-else>
+            <FilterBar
+              :filters="config.filters"
+              :compare-label="config.compareLabel"
+              :compare-href="config.compareHref"
+              @update:values="onFilterValues"
+            />
 
-          <ProductResultList :columns="config.columns" :rows="sortedRows" />
+            <div class="mt-4 flex items-center justify-between">
+              <p class="text-sm font-semibold text-navy">{{ loading ? 'Loading…' : `${sortedRows.length} Products Found` }}</p>
+              <label class="inline-flex items-center gap-1.5 text-xs text-muted">
+                Sort by:
+                <select v-model="sortBy" class="rounded-lg border border-card-border bg-white px-2 py-1 text-xs text-navy">
+                  <option>Highest Rate</option>
+                </select>
+              </label>
+            </div>
+
+            <p v-if="loading" class="mt-4 rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">Loading…</p>
+            <ProductResultList v-else :columns="config.columns" :rows="sortedRows" />
+          </template>
         </template>
 
         <div v-else class="rounded-card border border-card-border bg-card p-10 text-center">

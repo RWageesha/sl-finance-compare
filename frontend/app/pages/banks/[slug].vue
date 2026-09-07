@@ -219,7 +219,7 @@ const compareLabel = computed(() => {
         <!-- Header panel -->
         <section class="flex flex-col gap-5 rounded-card bg-badge-bg p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
           <div class="flex items-start gap-4">
-            <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-card-border bg-white p-2">
+            <span class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-card-border bg-white p-2.5 sm:h-24 sm:w-24">
               <BankLogo :bank="bank" />
             </span>
             <div class="min-w-0">

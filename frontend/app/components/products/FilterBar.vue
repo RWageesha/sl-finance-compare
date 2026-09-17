@@ -11,7 +11,7 @@ const emit = defineEmits<{ 'update:values': [Record<string, string>] }>()
 const values = reactive<Record<string, string>>({})
 watchEffect(() => {
   for (const f of props.filters) {
-    if (!(f.key in values)) values[f.key] = f.type === 'dropdown' ? f.options?.[0] ?? '' : ''
+    if (!(f.key in values)) values[f.key] = f.type === 'dropdown' ? f.default ?? f.options?.[0] ?? '' : ''
   }
 })
 watch(values, (v) => emit('update:values', { ...v }), { deep: true, immediate: true })

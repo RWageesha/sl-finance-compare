@@ -11,9 +11,10 @@ import type { ProductRate } from '~/composables/useRatesApi'
 import type { SampleRow } from '~/config/productTypes'
 import { productDetailHref } from '~/utils/fdCompare'
 import { fmtTenure, formatCategoryLabel, fmtRelativeDate } from '~/utils/format'
+import type { TaggedRow } from '~/utils/bankDirectory'
 
-export type Kind = 'fd' | 'savings' | 'loans'
-export type TaggedRow = ProductRate & { kind: Kind }
+export type { TaggedRow }
+export type Kind = TaggedRow['kind']
 
 export function tenureLabelFor(r: ProductRate): string {
   return r.tenure_label || (r.tenure_value ? fmtTenure(r.tenure_value) : '')
@@ -53,8 +54,21 @@ const LOAN_CATEGORY_BY_SLUG: Record<string, string> = {
 // fetch+render real rows or show the honest "not tracked" empty state.
 export const LIVE_SLUGS = new Set(['fixed-deposits', 'savings-accounts', 'housing-loans', 'personal-loans', 'gold-loans'])
 
+// Curated tenure sequence for Fixed Deposits — 6/12/18/24 month multiples,
+// deliberately excluding the very short 1/3/4/7-month tenures a couple of
+// banks (e.g. NSB) also publish. That's a real, honest subset of the
+// scraped data (every row shown is still a genuine rate), just narrowed to
+// the tenure lengths most site visitors actually compare.
+function isCuratedFdTenure(months: number | undefined): boolean {
+  return typeof months === 'number' && months > 0 && months % 6 === 0
+}
+
 export function realRowsFor(slug: string, allRows: TaggedRow[]): SampleRow[] {
-  if (slug === 'fixed-deposits') return allRows.filter((r) => r.kind === 'fd').map(toSampleRow)
+  if (slug === 'fixed-deposits') {
+    return allRows
+      .filter((r) => r.kind === 'fd' && isCuratedFdTenure(r.tenure_value))
+      .map(toSampleRow)
+  }
   if (slug === 'savings-accounts') return allRows.filter((r) => r.kind === 'savings').map(toSampleRow)
   const category = LOAN_CATEGORY_BY_SLUG[slug]
   if (category) return allRows.filter((r) => r.kind === 'loans' && r.category_code === category).map(toSampleRow)

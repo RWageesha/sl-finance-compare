@@ -23,8 +23,15 @@ export interface FilterField {
   key: string
   label: string
   placeholder?: string
-  /** dropdown/multiselect only — first option is the "no filter" default. */
+  /** dropdown/multiselect only — first option is the "no filter" value
+   * (selecting it clears the filter); options are listed in priority
+   * order (most commonly wanted first) rather than alphabetically. */
   options?: string[]
+  /** dropdown only — the value pre-selected on first load, when it should
+   * differ from options[0]. E.g. Savings Accounts defaults to "Standard
+   * Savings" (most visitors are adults) while "Any" stays available as
+   * the explicit "show everything" option, just not the default. */
+  default?: string
 }
 
 export type ColumnType = 'bank' | 'text' | 'rate' | 'rateRange' | 'computed' | 'verification' | 'action'
@@ -136,7 +143,7 @@ export const PRODUCT_TYPES: Record<string, ProductTypeConfig> = {
     title: 'Fixed Deposit Rates',
     subtitle: 'Compare fixed deposit rates from every licensed bank in Sri Lanka. Find the highest yield for your savings timeline.',
     filters: [
-      { type: 'dropdown', key: 'tenure', label: 'Tenure', options: ['Any', '1 Month', '3 Months', '6 Months', '12 Months', '24 Months', '36 Months', '60 Months'] },
+      { type: 'dropdown', key: 'tenure', label: 'Tenure', options: ['Any', '6 Months', '12 Months', '18 Months', '24 Months', '36 Months', '48 Months', '60 Months'] },
       { type: 'multiselect', key: 'bank', label: 'Bank', placeholder: 'All Banks' }
     ],
     compareLabel: 'Compare FD',
@@ -156,7 +163,7 @@ export const PRODUCT_TYPES: Record<string, ProductTypeConfig> = {
       subtitle: 'Estimate and compare rates of return across licensed retail banks in Sri Lanka. Fill in the deposit variables to project net maturity value.',
       filters: [
         { type: 'input', key: 'amount', label: 'Deposit Amount (LKR)', placeholder: 'Rs. 1,000,000' },
-        { type: 'dropdown', key: 'tenure', label: 'Tenure', options: ['12 Months', '1 Month', '3 Months', '6 Months', '24 Months', '36 Months', '60 Months'] }
+        { type: 'dropdown', key: 'tenure', label: 'Tenure', options: ['12 Months', '6 Months', '18 Months', '24 Months', '36 Months', '48 Months', '60 Months'] }
       ],
       defaultLabel: 'Compare FD',
       updateLabel: 'Update Results',
@@ -181,7 +188,7 @@ export const PRODUCT_TYPES: Record<string, ProductTypeConfig> = {
     title: 'Savings Account Rates',
     subtitle: 'Compare savings account interest rates across Sri Lankan banks. Maximize daily earnings.',
     filters: [
-      { type: 'dropdown', key: 'category', label: 'Account Type', options: ['Any', 'Standard Savings', 'Senior Savings', 'Teen Savings', 'Womens Savings', 'Minor Savings'] },
+      { type: 'dropdown', key: 'category', label: 'Account Type', options: ['Any', 'Standard Savings', 'Senior Savings', 'Womens Savings', 'Teen Savings', 'Minor Savings'], default: 'Standard Savings' },
       { type: 'multiselect', key: 'bank', label: 'Bank', placeholder: 'All Banks' }
     ],
     compareLabel: 'Compare Savings',
@@ -200,7 +207,7 @@ export const PRODUCT_TYPES: Record<string, ProductTypeConfig> = {
       heading: 'Compare Savings Account Rates',
       subtitle: 'Compare interest rates across Sri Lankan savings accounts.',
       filters: [
-        { type: 'dropdown', key: 'category', label: 'Account Type', options: ['Any', 'Standard Savings', 'Senior Savings', 'Teen Savings', 'Womens Savings', 'Minor Savings'] }
+        { type: 'dropdown', key: 'category', label: 'Account Type', options: ['Any', 'Standard Savings', 'Senior Savings', 'Womens Savings', 'Teen Savings', 'Minor Savings'], default: 'Standard Savings' }
       ],
       defaultLabel: 'Compare Savings',
       updateLabel: 'Update Results',

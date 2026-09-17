@@ -71,7 +71,7 @@ function defaultFilterValues(): Record<string, string> {
       const match = f.options?.find((o) => parseTenureLabelToMonths(o) === months)
       values[f.key] = match ?? f.options?.[0] ?? ''
     } else {
-      values[f.key] = f.type === 'input' ? (f.placeholder ?? '') : (f.options?.[0] ?? '')
+      values[f.key] = f.type === 'input' ? (f.placeholder ?? '') : (f.default ?? f.options?.[0] ?? '')
     }
   }
   return values

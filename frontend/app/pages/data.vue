@@ -185,7 +185,7 @@ const untrackedCount = computed(() => DIRECTORY_BANKS.length - trackedBanks.valu
                   >{{ row.bank.displayName[0] }}</span>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-navy">{{ row.bank.displayName }}</p>
-                    <a v-if="row.bank.sourceUrl" :href="row.bank.sourceUrl" target="_blank" rel="noopener" class="truncate text-xs text-primary hover:underline">{{ row.bank.sourceUrl }}</a>
+                    <a v-if="row.bank.sourceUrl" :href="row.bank.sourceUrl" target="_blank" rel="noopener" class="block truncate text-xs text-primary hover:underline">{{ row.bank.sourceUrl }}</a>
                   </div>
                 </div>
                 <span class="shrink-0 text-xs text-muted">{{ row.lastChecked ? `Checked ${fmtRelativeDate(row.lastChecked)}` : 'No data yet' }}</span>

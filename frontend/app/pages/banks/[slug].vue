@@ -230,7 +230,7 @@ const compareLabel = computed(() => {
         </nav>
 
         <!-- Header panel -->
-        <section class="flex flex-col gap-5 rounded-card bg-badge-bg p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
+        <section class="flex flex-col gap-5 rounded-card bg-badge-bg p-5 sm:p-7 lg:flex-row lg:items-start lg:justify-between">
           <div class="flex items-start gap-4">
             <span class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-card-border bg-white p-2.5 sm:h-24 sm:w-24">
               <BankLogo :bank="bank" />
@@ -253,7 +253,7 @@ const compareLabel = computed(() => {
             </div>
           </div>
 
-          <div v-if="bank.tracked" class="flex shrink-0 gap-2 sm:gap-3">
+          <div v-if="bank.tracked" class="flex flex-wrap gap-2 sm:gap-3 lg:shrink-0">
             <div class="min-w-[84px] rounded-lg border border-card-border bg-white px-3 py-2 text-center sm:min-w-[96px] sm:px-4">
               <p class="text-lg font-extrabold text-navy sm:text-xl">{{ stats.productCount }}</p>
               <p class="text-[10px] text-muted sm:text-xs">Products Tracked</p>

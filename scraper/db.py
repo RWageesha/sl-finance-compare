@@ -25,6 +25,8 @@ class ProductRate:
     tenure_label: str = ""
     rate_label: str = ""
     min_amount: float | None = None
+    annual_fee: float | None = None
+    min_income: float | None = None
     source_url: str = ""
     confidence: str = "high"
     scraped_at: dt.datetime = field(default_factory=lambda: dt.datetime.now(dt.timezone.utc))
@@ -121,8 +123,8 @@ class DB:
                 """
                 INSERT INTO product_rates
                     (product_id, tenure_value, tenure_unit, tenure_label, rate_label,
-                     min_amount, interest_rate, source_url, confidence, scraped_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     min_amount, interest_rate, annual_fee, min_income, source_url, confidence, scraped_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 [
                     (
@@ -133,6 +135,8 @@ class DB:
                         r.rate_label,
                         r.min_amount,
                         r.interest_rate,
+                        r.annual_fee,
+                        r.min_income,
                         r.source_url,
                         r.confidence or "high",
                         r.scraped_at,

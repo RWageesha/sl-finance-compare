@@ -133,7 +133,7 @@ export function findDirectoryBank(slug: string): DirectoryBank | undefined {
   return DIRECTORY_BANKS.find((b) => b.slug === slug)
 }
 
-export type TaggedRow = ProductRate & { kind: 'fd' | 'savings' | 'loans' }
+export type TaggedRow = ProductRate & { kind: 'fd' | 'savings' | 'loans' | 'cards' }
 
 export interface BankStats {
   productCount: number

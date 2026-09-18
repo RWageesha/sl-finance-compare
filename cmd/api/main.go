@@ -59,6 +59,7 @@ func run() error {
 	mux.HandleFunc("GET /api/v1/fixed-deposits", handleFixedDeposits(database))
 	mux.HandleFunc("GET /api/v1/savings-rates", handleSavingsRates(database))
 	mux.HandleFunc("GET /api/v1/loan-rates", handleLoanRates(database))
+	mux.HandleFunc("GET /api/v1/card-rates", handleCardRates(database))
 	mux.HandleFunc("GET /api/v1/rate-history", handleRateHistory(database))
 	mux.HandleFunc("POST /api/v1/user-reports", handlePublicUserReportCreate(database))
 	mux.HandleFunc("GET /healthz", handleHealthz)
@@ -164,6 +165,10 @@ func handleSavingsRates(database *db.DB) http.HandlerFunc {
 
 func handleLoanRates(database *db.DB) http.HandlerFunc {
 	return handleRatesForGroup(database, "LOAN", "loan rates")
+}
+
+func handleCardRates(database *db.DB) http.HandlerFunc {
+	return handleRatesForGroup(database, "CARD", "card rates")
 }
 
 // handleRatesForGroup returns a handler serving the latest rates under a

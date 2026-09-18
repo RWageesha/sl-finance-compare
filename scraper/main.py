@@ -181,7 +181,26 @@ def _scrape_combank(db: DB) -> tuple[int, list[Exception]]:
         log.info("combank: inserted %d loan rate(s)", len(product_rates))
         return len(product_rates)
 
-    for label, fn in (("combank-savings", savings), ("combank-loans", loans)):
+    def credit_cards() -> int:
+        rows = combank.parse_credit_cards(tariff_html)
+        product_rates = _normalize_all(rows, normalize.card, db, bank_id, "combank")
+        db.insert_product_rates(product_rates)
+        log.info("combank: inserted %d credit card rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def debit_cards() -> int:
+        rows = combank.parse_debit_cards(tariff_html)
+        product_rates = _normalize_all(rows, normalize.card, db, bank_id, "combank")
+        db.insert_product_rates(product_rates)
+        log.info("combank: inserted %d debit card rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, fn in (
+        ("combank-savings", savings),
+        ("combank-loans", loans),
+        ("combank-credit-cards", credit_cards),
+        ("combank-debit-cards", debit_cards),
+    ):
         attempted += 1
         err = _run_scrape(db, bank_id, label, combank.RATES_TARIFF_URL, fn)
         if err is not None:

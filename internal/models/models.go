@@ -56,6 +56,10 @@ type ProductRate struct {
 	RateLabel    string    `json:"rate_label,omitempty"`
 	MinAmount    *float64  `json:"min_amount,omitempty"`
 	InterestRate float64   `json:"interest_rate"`
+	// AnnualFee/MinIncome are Card-only fields (nil for every other
+	// product type) — see migration 006_cards.sql.
+	AnnualFee    *float64  `json:"annual_fee,omitempty"`
+	MinIncome    *float64  `json:"min_income,omitempty"`
 	SourceURL    string    `json:"source_url,omitempty"`
 	Confidence   string    `json:"confidence,omitempty"`
 	ScrapedAt    time.Time `json:"scraped_at"`

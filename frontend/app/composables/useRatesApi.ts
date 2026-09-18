@@ -16,6 +16,10 @@ export interface ProductRate {
   rate_label?: string
   min_amount?: number
   interest_rate: number
+  /** Card-only fields (see migration 006_cards.sql) — absent for every
+   * other product type. */
+  annual_fee?: number
+  min_income?: number
   source_url?: string
   confidence?: string
   scraped_at: string
@@ -57,6 +61,7 @@ export function useRatesApi() {
     fetchFixedDeposits: () => fetchRates('/api/v1/fixed-deposits'),
     fetchSavings: () => fetchRates('/api/v1/savings-rates'),
     fetchLoans: () => fetchRates('/api/v1/loan-rates'),
+    fetchCards: () => fetchRates('/api/v1/card-rates'),
     // Oldest first — every scrape ever recorded for one product line.
     fetchRateHistory: (params: RateHistoryParams) => fetchRates(`/api/v1/rate-history?${historyQuery(params)}`)
   }

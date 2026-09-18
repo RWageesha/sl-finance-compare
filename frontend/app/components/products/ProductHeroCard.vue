@@ -1,12 +1,16 @@
 <script setup lang="ts">
-defineProps<{
-  bankName: string
-  bankSlug?: string
-  productName: string
-  lastUpdated: string
-  rate: string
-  paymentFrequency?: string
-}>()
+withDefaults(
+  defineProps<{
+    bankName: string
+    bankSlug?: string
+    productName: string
+    lastUpdated: string
+    rate: string
+    rateLabel?: string
+    paymentFrequency?: string
+  }>(),
+  { rateLabel: 'Annual Interest Rate' }
+)
 </script>
 
 <template>
@@ -23,9 +27,9 @@ defineProps<{
       <p class="mt-1.5 text-xs text-[#94a3b8]">Last updated: {{ lastUpdated }}</p>
     </div>
     <div class="shrink-0 text-right">
-      <p class="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8]">Annual Interest Rate</p>
+      <p class="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8]">{{ rateLabel }}</p>
       <p class="text-[36px] font-bold leading-none text-[#7fa8ff] sm:text-[40px]">
-        {{ rate }}<span class="ml-1 text-base font-normal text-[#cbd5e1]">p.a.</span>
+        {{ rate }}<span v-if="rate.includes('%')" class="ml-1 text-base font-normal text-[#cbd5e1]">p.a.</span>
       </p>
       <p v-if="paymentFrequency" class="mt-1.5 text-xs text-[#94a3b8]">{{ paymentFrequency }}</p>
     </div>

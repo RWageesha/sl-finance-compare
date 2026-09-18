@@ -11,7 +11,7 @@ useHead({
   title: computed(() => (config.value ? `${config.value.title} — FindRate LK` : 'Product type not found — FindRate LK'))
 })
 
-const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
+const { fetchFixedDeposits, fetchSavings, fetchLoans, fetchCards } = useRatesApi()
 const allRows = ref<TaggedRow[]>([])
 const loading = ref(true)
 
@@ -21,15 +21,17 @@ onMounted(async () => {
     return
   }
   try {
-    const [fd, savings, loans] = await Promise.all([
+    const [fd, savings, loans, cards] = await Promise.all([
       fetchFixedDeposits().catch(() => []),
       fetchSavings().catch(() => []),
-      fetchLoans().catch(() => [])
+      fetchLoans().catch(() => []),
+      fetchCards().catch(() => [])
     ])
     allRows.value = [
       ...fd.map((r) => ({ ...r, kind: 'fd' as Kind })),
       ...savings.map((r) => ({ ...r, kind: 'savings' as Kind })),
-      ...loans.map((r) => ({ ...r, kind: 'loans' as Kind }))
+      ...loans.map((r) => ({ ...r, kind: 'loans' as Kind })),
+      ...cards.map((r) => ({ ...r, kind: 'cards' as Kind }))
     ]
   } finally {
     loading.value = false

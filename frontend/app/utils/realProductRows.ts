@@ -2,14 +2,15 @@
 // bankDirectory.ts's TaggedRow) onto the generic SampleRow shape that
 // FilterBar/ProductResultList/CompareResultList already know how to
 // render, for the Product Directory (/products/[slug]) and Compare
-// (/compare/[slug]) pages. Fixed Deposits, Savings, and the three loan
-// categories (Housing/Personal/Gold) all have real scraped data behind
-// them; Credit/Debit Cards don't (no scraper tracks them anywhere in this
-// codebase), so realRowsFor returns [] for those rather than inventing
-// rows — callers show an honest "not tracked yet" state instead.
+// (/compare/[slug]) pages. Fixed Deposits, Savings, the three loan
+// categories (Housing/Personal/Gold), and Credit/Debit Cards all have
+// real scraped data behind them (see migration 006_cards.sql and
+// scraper/normalize.py's card() for the cards side) — realRowsFor returns
+// [] only for a slug no scraper backs at all, so those pages show an
+// honest "not tracked" state instead of inventing rows.
 import type { ProductRate } from '~/composables/useRatesApi'
 import type { SampleRow } from '~/config/productTypes'
-import { productDetailHref } from '~/utils/fdCompare'
+import { productDetailHref, fmtLkr } from '~/utils/fdCompare'
 import { fmtTenure, formatCategoryLabel, fmtRelativeDate } from '~/utils/format'
 import type { TaggedRow } from '~/utils/bankDirectory'
 
@@ -29,12 +30,17 @@ function titleFor(r: TaggedRow): string {
 }
 
 function toSampleRow(r: TaggedRow): SampleRow {
+  // Debit cards don't accrue interest — interest_rate is a literal 0, not
+  // a placeholder (see normalize.card) — so the shared "rate" column
+  // stays blank for them rather than showing a misleading "0.00%".
+  const isDebitCard = r.category_code === 'DEBIT_CARD'
   return {
     id: String(r.id),
     bank: r.bank_name,
     product: titleFor(r),
-    rate: `${r.interest_rate.toFixed(2)}%`,
+    rate: isDebitCard ? '' : `${r.interest_rate.toFixed(2)}%`,
     rateValue: r.interest_rate,
+    annualFee: r.annual_fee !== undefined ? fmtLkr(r.annual_fee) : undefined,
     tenure: tenureLabelFor(r),
     tenureMonths: r.tenure_value,
     category: formatCategoryLabel(r.category_code),
@@ -52,7 +58,15 @@ const LOAN_CATEGORY_BY_SLUG: Record<string, string> = {
 // The only product-type slugs backed by a real scraper anywhere in this
 // codebase — used by the Directory/Compare pages to decide whether to
 // fetch+render real rows or show the honest "not tracked" empty state.
-export const LIVE_SLUGS = new Set(['fixed-deposits', 'savings-accounts', 'housing-loans', 'personal-loans', 'gold-loans'])
+export const LIVE_SLUGS = new Set([
+  'fixed-deposits',
+  'savings-accounts',
+  'housing-loans',
+  'personal-loans',
+  'gold-loans',
+  'credit-cards',
+  'debit-cards'
+])
 
 // Curated tenure sequence for Fixed Deposits — 6/12/18/24 month multiples,
 // deliberately excluding the very short 1/3/4/7-month tenures a couple of
@@ -70,6 +84,8 @@ export function realRowsFor(slug: string, allRows: TaggedRow[]): SampleRow[] {
       .map(toSampleRow)
   }
   if (slug === 'savings-accounts') return allRows.filter((r) => r.kind === 'savings').map(toSampleRow)
+  if (slug === 'credit-cards') return allRows.filter((r) => r.kind === 'cards' && r.category_code === 'CREDIT_CARD').map(toSampleRow)
+  if (slug === 'debit-cards') return allRows.filter((r) => r.kind === 'cards' && r.category_code === 'DEBIT_CARD').map(toSampleRow)
   const category = LOAN_CATEGORY_BY_SLUG[slug]
   if (category) return allRows.filter((r) => r.kind === 'loans' && r.category_code === category).map(toSampleRow)
   return []

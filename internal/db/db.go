@@ -163,7 +163,7 @@ func (d *DB) GetLatestRates(ctx context.Context, categoryGroup string) ([]models
 		SELECT DISTINCT ON (r.product_id, r.tenure_value, r.tenure_label, r.rate_label)
 			r.id, r.product_id, b.name, b.code, c.code, p.name,
 			r.tenure_value, r.tenure_unit, r.tenure_label, r.rate_label,
-			r.min_amount, r.interest_rate, r.source_url, r.confidence, r.scraped_at
+			r.min_amount, r.interest_rate, r.annual_fee, r.min_income, r.source_url, r.confidence, r.scraped_at
 		FROM product_rates r
 		JOIN products p ON p.id = r.product_id
 		JOIN banks b ON b.id = p.bank_id
@@ -183,7 +183,7 @@ func (d *DB) GetLatestRates(ctx context.Context, categoryGroup string) ([]models
 		if err := rows.Scan(
 			&r.ID, &r.ProductID, &r.BankName, &r.BankCode, &r.CategoryCode, &r.ProductName,
 			&r.TenureValue, &tenureUnit, &r.TenureLabel, &r.RateLabel,
-			&r.MinAmount, &r.InterestRate, &r.SourceURL, &r.Confidence, &r.ScrapedAt,
+			&r.MinAmount, &r.InterestRate, &r.AnnualFee, &r.MinIncome, &r.SourceURL, &r.Confidence, &r.ScrapedAt,
 		); err != nil {
 			return nil, fmt.Errorf("db: scan product rate row: %w", err)
 		}
@@ -220,7 +220,7 @@ func (d *DB) GetRateHistory(ctx context.Context, productID int64, tenureValue *i
 	rows, err := d.pool.Query(ctx, `
 		SELECT r.id, r.product_id, b.name, b.code, c.code, p.name,
 			r.tenure_value, r.tenure_unit, r.tenure_label, r.rate_label,
-			r.min_amount, r.interest_rate, r.source_url, r.confidence, r.scraped_at
+			r.min_amount, r.interest_rate, r.annual_fee, r.min_income, r.source_url, r.confidence, r.scraped_at
 		FROM product_rates r
 		JOIN products p ON p.id = r.product_id
 		JOIN banks b ON b.id = p.bank_id
@@ -243,7 +243,7 @@ func (d *DB) GetRateHistory(ctx context.Context, productID int64, tenureValue *i
 		if err := rows.Scan(
 			&r.ID, &r.ProductID, &r.BankName, &r.BankCode, &r.CategoryCode, &r.ProductName,
 			&r.TenureValue, &tenureUnit, &r.TenureLabel, &r.RateLabel,
-			&r.MinAmount, &r.InterestRate, &r.SourceURL, &r.Confidence, &r.ScrapedAt,
+			&r.MinAmount, &r.InterestRate, &r.AnnualFee, &r.MinIncome, &r.SourceURL, &r.Confidence, &r.ScrapedAt,
 		); err != nil {
 			return nil, fmt.Errorf("db: scan rate history row: %w", err)
 		}

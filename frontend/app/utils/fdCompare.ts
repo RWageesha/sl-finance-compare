@@ -96,5 +96,6 @@ export function productDetailHref(row: ProductRate): string | null {
     return `/products/fixed-deposits/${fdSlug(bankSlug, row.category_code, row.tenure_value ?? 0)}`
   }
   if (row.category_code.endsWith('_SAVINGS')) return `/products/savings/${row.id}`
+  if (row.category_code.endsWith('_CARD')) return `/products/cards/${row.id}`
   return `/products/loans/${row.id}`
 }

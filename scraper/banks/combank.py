@@ -9,6 +9,7 @@ Port of internal/scrapers/combank/{fd,savings,loans}.go.
 from __future__ import annotations
 
 import datetime as dt
+import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -44,6 +45,13 @@ _SAVINGS_SKIP_KEYWORDS = ("fixed deposit", "foreign currency", "fc plus", "pfc",
 # Home Loans, Gold Loans Pawning, Diribala Loans, Agriculture Sector, All
 # Other Advances, Penal Interest on Overdue Credit Facilities).
 _LENDING_RATES_TAB_SELECTOR = "#lending-rates"
+
+# The tab-pane covering card products and ATM/FX fee schedules.
+_CARDS_TAB_SELECTOR = "#cards-atm-tariffs"
+# Each credit-card tier table's own "Interest Monthly (28% APR) w.e.f
+# ..." row spells out the annual APR in its label — the value cells only
+# ever show the monthly-equivalent figure, not the APR itself.
+_APR_LABEL_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%\s*apr", re.IGNORECASE)
 
 
 class ParseError(ValueError):
@@ -282,4 +290,143 @@ def parse_loans(html: str) -> list[dict]:
 
     if not rates:
         raise ParseError("combank: no loan rates parsed from rates-tariff page (selectors likely stale)")
+    return rates
+
+
+def _parse_money(text: str) -> float | None:
+    """Parses a fee cell like "Rs 2,500/-" or "Free" into a plain number.
+    Returns None for anything that isn't a real amount (e.g. "-"), so
+    callers can tell "genuinely free" (0.0) apart from "not published".
+    """
+    trimmed = text.strip()
+    if trimmed.lower() in ("free", "no charge"):
+        return 0.0
+    digits = re.sub(r"[^0-9.]", "", trimmed)
+    if not digits:
+        return None
+    try:
+        return float(digits)
+    except ValueError:
+        return None
+
+
+def parse_credit_cards(html: str) -> list[dict]:
+    """Extracts credit card rates from the Cards & ATM Tariffs tab. Each
+    card tier's table is a pivot: the header row's cells (after a blank
+    first cell) are the tier names, and each subsequent row is one
+    attribute across every tier — only "Primary Card Annual Fee" and
+    "Interest Monthly (NN% APR)" are used here. A table is only treated
+    as a credit-card tier table if it has both of those rows, which is
+    what tells it apart from the Debit Cards/ATM Tariffs/Other Card
+    Services tables in the same tab (none of which have an APR row).
+    """
+    soup = BeautifulSoup(html, "lxml")
+    tab = soup.select_one(_CARDS_TAB_SELECTOR)
+    if tab is None:
+        raise ParseError(f"combank: {_CARDS_TAB_SELECTOR!r} tab not found (page structure likely changed)")
+
+    rates: list[dict] = []
+    scrape_at = dt.datetime.now(dt.timezone.utc)
+
+    for block in tab.select(".expand-block"):
+        table = block.find("table")
+        if table is None:
+            continue
+        rows = table.find_all("tr")
+        if not rows:
+            continue
+
+        header_cells = rows[0].find_all(["td", "th"])
+        tier_names = [c.get_text(" ", strip=True) for c in header_cells[1:]]
+        if not tier_names:
+            continue
+
+        annual_fees: list[str] | None = None
+        apr: float | None = None
+        for row in rows[1:]:
+            cells = row.find_all(["td", "th"])
+            if not cells:
+                continue
+            label = cells[0].get_text(" ", strip=True)
+            lower = label.lower()
+            if "primary card annual fee" in lower:
+                annual_fees = [c.get_text(" ", strip=True) for c in cells[1:]]
+            elif "interest monthly" in lower:
+                m = _APR_LABEL_RE.search(label)
+                if m:
+                    apr = float(m.group(1))
+
+        if apr is None or annual_fees is None:
+            continue  # not a credit-card tier table (Debit Cards, ATM Tariffs, ...)
+
+        for tier_name, fee_text in zip(tier_names, annual_fees):
+            if not tier_name:
+                continue
+            rates.append(
+                {
+                    "card_type": "credit",
+                    "card_name": f"{tier_name} Credit Card",
+                    "interest_rate": apr,
+                    "annual_fee": _parse_money(fee_text),
+                    "source_url": RATES_TARIFF_URL,
+                    "scraped_at": scrape_at,
+                }
+            )
+
+    if not rates:
+        raise ParseError("combank: no credit card rates parsed from rates-tariff page (selectors likely stale)")
+    return rates
+
+
+def parse_debit_cards(html: str) -> list[dict]:
+    """Extracts ComBank's one Debit Card product from the "Debit Cards"
+    block on the Cards & ATM Tariffs tab — a flat 2-column fee schedule
+    (unlike the credit-card tier tables), from which only the annual
+    service fee is a genuine ongoing per-cardholder cost; the rest are
+    one-off/incidental fees (replacement, PIN reissue, ...) out of scope
+    here. interest_rate is 0 — debit cards don't accrue interest at all,
+    a literal fact rather than a placeholder (see normalize.card).
+    """
+    soup = BeautifulSoup(html, "lxml")
+    tab = soup.select_one(_CARDS_TAB_SELECTOR)
+    if tab is None:
+        raise ParseError(f"combank: {_CARDS_TAB_SELECTOR!r} tab not found (page structure likely changed)")
+
+    rates: list[dict] = []
+    scrape_at = dt.datetime.now(dt.timezone.utc)
+
+    for block in tab.select(".expand-block"):
+        link = block.select_one(".expand-link")
+        name = link.get_text(strip=True) if link else ""
+        if name.lower() != "debit cards":
+            continue
+
+        table = block.find("table")
+        if table is None:
+            continue
+
+        for row in table.find_all("tr"):
+            cells = row.find_all(["td", "th"])
+            if len(cells) != 2:
+                continue
+            label = cells[0].get_text(" ", strip=True).lower()
+            if "annual service fee" not in label:
+                continue
+            fee = _parse_money(cells[1].get_text(strip=True))
+            if fee is None:
+                continue
+            rates.append(
+                {
+                    "card_type": "debit",
+                    "card_name": "Debit Card",
+                    "interest_rate": 0.0,
+                    "annual_fee": fee,
+                    "source_url": RATES_TARIFF_URL,
+                    "scraped_at": scrape_at,
+                }
+            )
+            break
+
+    if not rates:
+        raise ParseError("combank: no debit card rates parsed from rates-tariff page (selectors likely stale)")
     return rates

@@ -13,7 +13,7 @@ if (!bank) {
 
 useHead({ title: `${bank.displayName} — FindRate LK` })
 
-const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
+const { fetchFixedDeposits, fetchSavings, fetchLoans, fetchCards } = useRatesApi()
 
 const allRows = ref<TaggedRow[]>([])
 const loading = ref(true)
@@ -24,15 +24,17 @@ onMounted(async () => {
     return
   }
   try {
-    const [fd, savings, loans] = await Promise.all([
+    const [fd, savings, loans, cards] = await Promise.all([
       fetchFixedDeposits().catch(() => []),
       fetchSavings().catch(() => []),
-      fetchLoans().catch(() => [])
+      fetchLoans().catch(() => []),
+      fetchCards().catch(() => [])
     ])
     allRows.value = [
       ...fd.map((r) => ({ ...r, kind: 'fd' as const })),
       ...savings.map((r) => ({ ...r, kind: 'savings' as const })),
-      ...loans.map((r) => ({ ...r, kind: 'loans' as const }))
+      ...loans.map((r) => ({ ...r, kind: 'loans' as const })),
+      ...cards.map((r) => ({ ...r, kind: 'cards' as const }))
     ]
   } finally {
     loading.value = false
@@ -48,14 +50,11 @@ const updatedLabel = computed(() => {
   return stats.value.lastUpdated ? fmtRelativeDate(stats.value.lastUpdated) : 'No data yet'
 })
 
-// "Cards" has no real tracked category anywhere in this codebase — kept as
-// a visible, honestly-empty tab rather than left out, matching the
-// homepage's "Coming soon" convention for the same product type.
 const TABS = [
   { key: 'fd', label: 'Fixed Deposits', kind: 'fd' as const },
   { key: 'savings', label: 'Savings', kind: 'savings' as const },
   { key: 'loans', label: 'Loans', kind: 'loans' as const },
-  { key: 'cards', label: 'Cards', kind: null }
+  { key: 'cards', label: 'Cards', kind: 'cards' as const }
 ]
 type TabKey = (typeof TABS)[number]['key']
 
@@ -65,13 +64,13 @@ const tabCount = (key: TabKey) => {
   return bankRows.value.filter((r) => r.kind === def.kind).length
 }
 
-// Only shows a tab once its data has loaded and either it has rows, or
-// it's the Cards tab — which has no tracked category anywhere in this
-// codebase yet, so it stays visible as an honest "coming soon" (see the
-// TABS comment above) rather than disappearing for every single bank.
+// A tab only shows once its data has loaded and it actually has rows for
+// this specific bank — Cards is tracked (see migration 006_cards.sql),
+// just not yet scraped for every bank, same as e.g. a bank with no gold
+// loan product simply not showing a Gold Loans row.
 const visibleTabs = computed(() => {
   if (loading.value) return TABS
-  return TABS.filter((t) => t.key === 'cards' || tabCount(t.key) > 0)
+  return TABS.filter((t) => tabCount(t.key) > 0)
 })
 watch(visibleTabs, (tabs) => {
   if (!tabs.some((t) => t.key === activeTab.value) && tabs.length) activeTab.value = tabs[0].key
@@ -142,6 +141,18 @@ const pageNumbers = computed<(number | 'ellipsis')[]>(() => {
   return pages
 })
 
+// Debit cards store interest_rate as a literal 0 (they don't accrue
+// interest at all — see normalize.card), so the headline figure shown
+// here is the annual fee instead of a misleading "0.00%".
+function rowRateDisplay(r: TaggedRow): string {
+  if (r.category_code === 'DEBIT_CARD') return r.annual_fee !== undefined ? fmtLkr(r.annual_fee) : 'Free'
+  return `${r.interest_rate.toFixed(2)}%`
+}
+function rowRateSubLabel(r: TaggedRow): string {
+  if (r.category_code === 'DEBIT_CARD') return 'Annual Fee'
+  return r.category_code === 'CREDIT_CARD' ? 'APR' : 'Interest Rate (p.a.)'
+}
+
 function rowTitle(r: TaggedRow): string {
   const tenure = tenureLabelFor(r)
   if (r.kind === 'fd') return tenure ? `${tenure} Fixed Deposit` : formatCategoryLabel(r.category_code)
@@ -157,6 +168,7 @@ function rowTags(r: TaggedRow): string[] {
   if (tenure) tags.push(tenure)
   tags.push(formatCategoryLabel(r.category_code))
   if (r.rate_label) tags.push(r.rate_label)
+  if (r.annual_fee !== undefined) tags.push(`Annual Fee: ${fmtLkr(r.annual_fee)}`)
   return tags
 }
 
@@ -198,6 +210,7 @@ const compareLabel = computed(() => {
   if (activeTab.value === 'fd') return 'Compare FD'
   if (activeTab.value === 'savings') return 'Compare Savings'
   if (activeTab.value === 'loans') return 'Compare Loans'
+  if (activeTab.value === 'cards') return 'Compare Cards'
   return 'Compare'
 })
 </script>
@@ -274,7 +287,7 @@ const compareLabel = computed(() => {
           </div>
 
           <!-- Filter bar -->
-          <div v-if="activeTab !== 'cards'" class="mt-4 flex flex-wrap items-center gap-3 rounded-card border border-card-border bg-card p-4 shadow-sm">
+          <div class="mt-4 flex flex-wrap items-center gap-3 rounded-card border border-card-border bg-card p-4 shadow-sm">
             <select v-model="tenureFilter" class="rounded-lg border border-card-border px-3 py-2 text-sm text-navy">
               <option value="all">Tenure: All</option>
               <option v-for="t in tenureOptions" :key="t" :value="t">{{ t }}</option>
@@ -289,10 +302,7 @@ const compareLabel = computed(() => {
           </div>
 
           <!-- Result list -->
-          <div v-if="activeTab === 'cards'" class="mt-4 rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">
-            Credit card tariffs aren't tracked yet — this tab is shown to reflect the full shape of the market.
-          </div>
-          <p v-else-if="loading" class="mt-4 rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">Loading…</p>
+          <p v-if="loading" class="mt-4 rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">Loading…</p>
           <p v-else-if="filteredRows.length === 0" class="mt-4 rounded-card border border-card-border bg-card p-10 text-center text-sm text-muted">
             No {{ activeTab }} rates match these filters yet.
           </p>
@@ -308,8 +318,8 @@ const compareLabel = computed(() => {
               </div>
               <div class="flex shrink-0 items-center justify-between gap-4 sm:justify-end">
                 <div class="text-right">
-                  <p class="text-xl font-extrabold text-primary">{{ r.interest_rate.toFixed(2) }}%</p>
-                  <p class="text-[11px] text-muted">Interest Rate (p.a.)</p>
+                  <p class="text-xl font-extrabold text-primary">{{ rowRateDisplay(r) }}</p>
+                  <p class="text-[11px] text-muted">{{ rowRateSubLabel(r) }}</p>
                   <p class="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted">
                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />Verified {{ fmtRelativeDate(r.scraped_at) }}
                   </p>

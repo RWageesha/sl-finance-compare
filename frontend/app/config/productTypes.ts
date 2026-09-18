@@ -130,10 +130,10 @@ export const PRODUCT_TYPE_ORDER = [
   'debit-cards'
 ] as const
 
-// No static row data below — fixed-deposits, savings-accounts, and the
-// three loan categories are `live: true` and get their rows from the real
-// API at runtime (see utils/realProductRows.ts). credit-cards/debit-cards
-// are `live: false` and never render a rows array at all.
+// No static row data below — every `live: true` type gets its rows from
+// the real API at runtime (see utils/realProductRows.ts). `live: false`
+// is reserved for a product type no scraper backs at all yet, in which
+// case the page shows an honest "not tracked" state instead.
 
 export const PRODUCT_TYPES: Record<string, ProductTypeConfig> = {
   'fixed-deposits': {
@@ -333,13 +333,20 @@ export const PRODUCT_TYPES: Record<string, ProductTypeConfig> = {
     switcherLabel: 'Credit Cards',
     eyebrow: 'CREDIT CARDS',
     title: 'Credit Card Rates & Fees',
-    subtitle: 'Compare annual fees, interest rates, and rewards across credit cards from Sri Lankan banks.',
-    filters: [],
+    subtitle: 'Compare annual fees and interest rates across credit cards from Sri Lankan banks.',
+    filters: [{ type: 'multiselect', key: 'bank', label: 'Bank', placeholder: 'All Banks' }],
     compareLabel: 'Compare Cards',
     compareHref: '#',
-    columns: [],
+    columns: [
+      { key: 'bank', label: 'Bank', type: 'bank' },
+      { key: 'product', label: 'Card', type: 'text' },
+      { key: 'rate', label: 'APR', type: 'rate', align: 'right' },
+      { key: 'annualFee', label: 'Annual Fee', type: 'text' },
+      { key: 'verified', label: 'Verification', type: 'verification' },
+      { key: 'action', label: 'Action', type: 'action' }
+    ],
     rows: [],
-    live: false
+    live: true
   },
 
   'debit-cards': {
@@ -347,12 +354,18 @@ export const PRODUCT_TYPES: Record<string, ProductTypeConfig> = {
     switcherLabel: 'Debit Cards',
     eyebrow: 'DEBIT CARDS',
     title: 'Debit Card Fees',
-    subtitle: 'Compare debit card issuance, annual, and transaction fees across Sri Lankan banks.',
-    filters: [],
+    subtitle: 'Compare debit card annual fees across Sri Lankan banks.',
+    filters: [{ type: 'multiselect', key: 'bank', label: 'Bank', placeholder: 'All Banks' }],
     compareLabel: 'Compare Debit Cards',
     compareHref: '#',
-    columns: [],
+    columns: [
+      { key: 'bank', label: 'Bank', type: 'bank' },
+      { key: 'product', label: 'Card', type: 'text' },
+      { key: 'annualFee', label: 'Annual Fee', type: 'text' },
+      { key: 'verified', label: 'Verification', type: 'verification' },
+      { key: 'action', label: 'Action', type: 'action' }
+    ],
     rows: [],
-    live: false
+    live: true
   }
 }

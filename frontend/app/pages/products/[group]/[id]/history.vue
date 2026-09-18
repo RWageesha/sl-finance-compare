@@ -5,7 +5,8 @@ import type { ProductRate } from '~/composables/useRatesApi'
 
 const GROUP_META = {
   savings: { directoryLabel: 'Savings Accounts', directoryHref: '/rates?tab=savings' },
-  loans: { directoryLabel: 'Loans', directoryHref: '/rates?tab=loans' }
+  loans: { directoryLabel: 'Loans', directoryHref: '/rates?tab=loans' },
+  cards: { directoryLabel: 'Cards', directoryHref: '/products/credit-cards' }
 } as const
 
 const route = useRoute()
@@ -17,7 +18,7 @@ if (!(group in GROUP_META) || !Number.isFinite(id)) {
 }
 const meta = GROUP_META[group]
 
-const { fetchSavings, fetchLoans, fetchRateHistory } = useRatesApi()
+const { fetchSavings, fetchLoans, fetchCards, fetchRateHistory } = useRatesApi()
 const rows = ref<ProductRate[]>([])
 const loading = ref(true)
 const row = ref<ProductRate | null>(null)
@@ -25,7 +26,8 @@ const history = ref<ProductRate[]>([])
 
 onMounted(async () => {
   try {
-    rows.value = await (group === 'savings' ? fetchSavings() : fetchLoans()).catch(() => [])
+    const fetchForGroup = group === 'savings' ? fetchSavings : group === 'cards' ? fetchCards : fetchLoans
+    rows.value = await fetchForGroup().catch(() => [])
     row.value = rows.value.find((r) => r.id === id) ?? null
     if (row.value) {
       history.value = await fetchRateHistory({

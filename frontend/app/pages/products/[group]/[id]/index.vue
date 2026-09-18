@@ -21,6 +21,12 @@ const GROUP_META = {
     directoryLabel: 'Loans',
     directoryHref: '/rates?tab=loans',
     disclosure: 'processing fees, collateral or eligibility requirements, or other terms'
+  },
+  cards: {
+    noun: 'Card',
+    directoryLabel: 'Cards',
+    directoryHref: '/products/credit-cards',
+    disclosure: 'rewards, cashback, or other perks'
   }
 } as const
 
@@ -33,7 +39,7 @@ if (!(group in GROUP_META) || !Number.isFinite(id)) {
 }
 const meta = GROUP_META[group]
 
-const { fetchSavings, fetchLoans, fetchRateHistory } = useRatesApi()
+const { fetchSavings, fetchLoans, fetchCards, fetchRateHistory } = useRatesApi()
 const rows = ref<ProductRate[]>([])
 const loading = ref(true)
 const row = ref<ProductRate | null>(null)
@@ -41,7 +47,8 @@ const history = ref<ProductRate[]>([])
 
 onMounted(async () => {
   try {
-    rows.value = await (group === 'savings' ? fetchSavings() : fetchLoans()).catch(() => [])
+    const fetchForGroup = group === 'savings' ? fetchSavings : group === 'cards' ? fetchCards : fetchLoans
+    rows.value = await fetchForGroup().catch(() => [])
     row.value = rows.value.find((r) => r.id === id) ?? null
     if (row.value) {
       history.value = await fetchRateHistory({
@@ -69,7 +76,7 @@ useHead({
 // (e.g. "Below Rs. 500,000/-", "Fixed Rate"), falling back to the
 // category name when neither is present.
 function productLabel(r: ProductRate): string {
-  return r.tenure_label || r.rate_label || formatCategoryLabel(r.category_code)
+  return r.tenure_label || r.rate_label || r.product_name || formatCategoryLabel(r.category_code)
 }
 
 const similar = computed(() => {
@@ -97,7 +104,7 @@ const compareHref = computed(() => {
   if (row.value.min_amount) params.set('amount', String(row.value.min_amount))
   return `/compare/${slug}?${params.toString()}`
 })
-const compareLabel = computed(() => (group === 'savings' ? 'Compare Savings' : 'Compare Loan'))
+const compareLabel = computed(() => (group === 'savings' ? 'Compare Savings' : group === 'cards' ? 'Compare Cards' : 'Compare Loan'))
 
 const reportUrl = computed(() => {
   if (!row.value) return '/report-issue'
@@ -118,6 +125,8 @@ const keyInfo = computed(() => {
   if (ex?.maxDeposit) items.push({ label: 'Maximum Amount', value: ex.maxDeposit })
   if (ex?.paymentFrequency) items.push({ label: 'Interest Payment', value: ex.paymentFrequency })
   items.push({ label: 'Category', value: formatCategoryLabel(row.value.category_code) })
+  if (row.value.annual_fee !== undefined) items.push({ label: 'Annual Fee', value: fmtLkr(row.value.annual_fee) })
+  if (row.value.min_income !== undefined) items.push({ label: 'Minimum Income', value: `${fmtLkr(row.value.min_income)}/month` })
   if (row.value.tenure_label) items.push({ label: group === 'savings' ? 'Balance Tier' : 'Tenure', value: row.value.tenure_label })
   if (ex?.earlyWithdrawal) items.push({ label: 'Early Withdrawal', value: ex.earlyWithdrawal })
   if (ex?.tax) items.push({ label: 'Tax', value: ex.tax })
@@ -127,6 +136,21 @@ const keyInfo = computed(() => {
   }
   items.push({ label: 'Last Verified Scrape', value: fmtRelativeDate(row.value.scraped_at) })
   return items
+})
+
+// Debit cards don't accrue interest (interest_rate is stored as a literal
+// 0, not a placeholder — see normalize.card), so showing "0.00% p.a." as
+// the headline figure would be actively misleading; the annual fee is
+// the number that actually matters for a debit card.
+const isDebitCard = computed(() => row.value?.category_code === 'DEBIT_CARD')
+const heroRate = computed(() => {
+  if (!row.value) return ''
+  if (isDebitCard.value) return row.value.annual_fee !== undefined ? fmtLkr(row.value.annual_fee) : 'Free'
+  return `${row.value.interest_rate.toFixed(2)}%`
+})
+const heroRateLabel = computed(() => {
+  if (isDebitCard.value) return 'Annual Fee'
+  return row.value?.category_code === 'CREDIT_CARD' ? 'APR' : 'Annual Interest Rate'
 })
 
 const chartPoints = computed(() => history.value.map((r) => ({ date: r.scraped_at, rate: r.interest_rate })))
@@ -167,7 +191,8 @@ const recentChanges = computed(() => {
             :bank-slug="bank?.slug"
             :product-name="`${formatCategoryLabel(row.category_code)}${row.tenure_label || row.rate_label ? ' — ' + productLabel(row) : ''}`"
             :last-updated="fmtDate(row.scraped_at)"
-            :rate="`${row.interest_rate.toFixed(2)}%`"
+            :rate="heroRate"
+            :rate-label="heroRateLabel"
             :payment-frequency="extras?.paymentFrequency"
           />
 

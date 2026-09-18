@@ -162,3 +162,29 @@ def loan(db: DB, bank_id: int, rate: dict) -> ProductRate:
         source_url=rate.get("source_url", ""),
         scraped_at=rate["scraped_at"],
     )
+
+
+# --- Cards ---------------------------------------------------------------
+
+
+def card(db: DB, bank_id: int, rate: dict) -> ProductRate:
+    """Normalizes one scraped card rate for bank_id into a ProductRate.
+    `rate` keys: card_type ("credit" | "debit"), card_name, interest_rate
+    (the card's APR — 0 for debit cards, which don't accrue interest, a
+    literal fact rather than a placeholder), annual_fee/min_income
+    (optional — debit cards in particular rarely publish a min_income),
+    source_url, scraped_at.
+    """
+    card_type = rate["card_type"]
+    category_code = "CREDIT_CARD" if card_type == "credit" else "DEBIT_CARD"
+    category_id = db.get_or_create_category(category_code, _title_from_code(category_code), "CARD")
+    product_id = db.get_or_create_product(bank_id, category_id, rate["card_name"])
+
+    return ProductRate(
+        product_id=product_id,
+        interest_rate=rate["interest_rate"],
+        annual_fee=rate.get("annual_fee"),
+        min_income=rate.get("min_income"),
+        source_url=rate.get("source_url", ""),
+        scraped_at=rate["scraped_at"],
+    )

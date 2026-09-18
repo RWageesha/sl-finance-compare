@@ -19,7 +19,11 @@ def rate(r: ProductRate) -> None:
     """
     if not r.product_id:
         raise ValidationError("validate: missing product id")
-    if r.interest_rate <= 0 or r.interest_rate > 100:
+    # Zero is only ever legitimate for a debit card (no interest mechanism
+    # at all — see normalize.card) — every other product type's rate is a
+    # real percentage a bank actually pays/charges, which is never exactly
+    # zero in practice, so this still catches a genuine parsing mistake.
+    if r.interest_rate < 0 or r.interest_rate > 100:
         raise ValidationError(f"validate: interest rate {r.interest_rate:.3f} out of plausible range")
     if r.tenure_value is not None and r.tenure_value < 0:
         raise ValidationError(f"validate: negative tenure value {r.tenure_value}")

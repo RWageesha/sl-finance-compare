@@ -42,8 +42,7 @@ const statusLabel = computed(() => {
     <aside class="fixed inset-y-0 left-0 flex w-60 flex-col border-r border-card-border bg-white">
       <div class="p-5">
         <NuxtLink to="/admin/dashboard" class="flex items-center gap-2">
-          <img src="/brand/logo-black.png" alt="" class="h-6 w-auto">
-          <span class="text-sm font-extrabold text-navy">FindRate LK</span>
+          <img src="/brand/logo-black.png" alt="FindRate LK" class="h-6 w-auto">
         </NuxtLink>
         <p class="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-muted">Admin Portal</p>
       </div>

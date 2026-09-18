@@ -4,22 +4,30 @@ import type { DirectoryBank, TaggedRow } from '~/utils/bankDirectory'
 
 useHead({ title: 'Bank Directory — FindRate LK' })
 
-const { fetchFixedDeposits, fetchSavings, fetchLoans } = useRatesApi()
+const { fetchFixedDeposits, fetchSavings, fetchLoans, fetchCards } = useRatesApi()
 
 const allRows = ref<TaggedRow[]>([])
 const loading = ref(true)
 
+// The denominator for "Categories tracked X/N" — always the full set of
+// product kinds this site tracks anywhere, not just however many a given
+// bank happens to have, so "3/4" honestly reads as "missing one category"
+// rather than a false "fully tracked".
+const TOTAL_CATEGORIES = 4
+
 onMounted(async () => {
   try {
-    const [fd, savings, loans] = await Promise.all([
+    const [fd, savings, loans, cards] = await Promise.all([
       fetchFixedDeposits().catch(() => []),
       fetchSavings().catch(() => []),
-      fetchLoans().catch(() => [])
+      fetchLoans().catch(() => []),
+      fetchCards().catch(() => [])
     ])
     allRows.value = [
       ...fd.map((r) => ({ ...r, kind: 'fd' as const })),
       ...savings.map((r) => ({ ...r, kind: 'savings' as const })),
-      ...loans.map((r) => ({ ...r, kind: 'loans' as const }))
+      ...loans.map((r) => ({ ...r, kind: 'loans' as const })),
+      ...cards.map((r) => ({ ...r, kind: 'cards' as const }))
     ]
   } finally {
     loading.value = false
@@ -149,8 +157,8 @@ watch([searchQuery, typeFilter, productFilter, sortBy], () => { currentPage.valu
             <div class="stat-row">
               <span>Categories tracked</span>
               <strong class="dot-stat">
-                <span class="dot" :class="{ green: statsFor(bank).categoriesTracked === 3 }" />
-                {{ statsFor(bank).categoriesTracked }}/3
+                <span class="dot" :class="{ green: statsFor(bank).categoriesTracked === TOTAL_CATEGORIES }" />
+                {{ statsFor(bank).categoriesTracked }}/{{ TOTAL_CATEGORIES }}
               </strong>
             </div>
 

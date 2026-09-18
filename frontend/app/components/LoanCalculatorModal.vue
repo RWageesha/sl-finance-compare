@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { DIRECTORY_BANKS } from '~/utils/bankDirectory'
+import { useProductLookup, productLabel, productRateLabel } from '~/composables/useProductLookup'
+
 const emit = defineEmits<{ close: [] }>()
 
 const TENURES = [12, 24, 36, 60, 120, 180, 240, 360]
@@ -7,6 +10,32 @@ const principal = ref(1000000)
 const rate = ref(12.5)
 const tenure = ref(60)
 const result = ref<number | null>(null)
+
+// Optional "fill in a real bank's rate" picker — Category -> Bank -> Loan
+// product — so visitors don't have to go find and type in a rate by hand.
+const LOAN_CATEGORIES = [
+  { label: 'Housing Loan', code: 'HOUSING_LOAN' },
+  { label: 'Personal Loan', code: 'PERSONAL_LOAN' },
+  { label: 'Gold Loan (Pawning)', code: 'GOLD_LOAN' }
+]
+const { allRows, ensureProductsLoaded } = useProductLookup()
+onMounted(() => { ensureProductsLoaded() })
+const LOAN_BANKS = DIRECTORY_BANKS.filter((b) => b.tracked)
+const pickerCategory = ref('')
+const pickerBank = ref('')
+const pickerProductId = ref('')
+const pickerProducts = computed(() => {
+  const bank = LOAN_BANKS.find((b) => b.slug === pickerBank.value)
+  if (!bank?.apiName || !pickerCategory.value) return []
+  return allRows.value.filter((r) => r.kind === 'loans' && r.bank_name === bank.apiName && r.category_code === pickerCategory.value)
+})
+watch([pickerCategory, pickerBank], () => { pickerProductId.value = '' })
+watch(pickerProductId, (id) => {
+  const row = pickerProducts.value.find((r) => String(r.id) === id)
+  if (!row) return
+  rate.value = row.interest_rate
+  calculate()
+})
 
 // Standard reducing-balance EMI formula: P * r * (1+r)^n / ((1+r)^n - 1),
 // with r as the monthly rate and n the number of monthly instalments.
@@ -34,6 +63,28 @@ function fmtLkr(n: number) {
 
 <template>
   <CalculatorModal eyebrow="Loan" title="Loan EMI Calculator" @close="emit('close')">
+    <div class="field">
+      <label for="loan-picker-category">Use a Real Bank Rate (optional)</label>
+      <select id="loan-picker-category" v-model="pickerCategory">
+        <option value="">Choose a loan type…</option>
+        <option v-for="c in LOAN_CATEGORIES" :key="c.code" :value="c.code">{{ c.label }}</option>
+      </select>
+    </div>
+    <div v-if="pickerCategory" class="field">
+      <label for="loan-picker-bank">Bank</label>
+      <select id="loan-picker-bank" v-model="pickerBank">
+        <option value="">Choose a bank…</option>
+        <option v-for="b in LOAN_BANKS" :key="b.slug" :value="b.slug">{{ b.displayName }}</option>
+      </select>
+    </div>
+    <div v-if="pickerBank" class="field">
+      <label for="loan-picker-product">Loan Product</label>
+      <select id="loan-picker-product" v-model="pickerProductId">
+        <option value="">{{ pickerProducts.length ? 'Choose a product…' : 'No tracked loans for this bank/type' }}</option>
+        <option v-for="p in pickerProducts" :key="p.id" :value="String(p.id)">{{ productLabel(p) }} — {{ productRateLabel(p) }}</option>
+      </select>
+    </div>
+    <div class="divider" />
     <div class="field">
       <label for="loan-principal">Loan Amount</label>
       <div class="input-suffix">
@@ -67,6 +118,11 @@ function fmtLkr(n: number) {
 <style scoped>
 .field {
   margin-bottom: 0.9rem;
+}
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 0 0.9rem;
 }
 label {
   display: block;

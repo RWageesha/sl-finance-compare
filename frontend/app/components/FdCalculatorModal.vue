@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { DIRECTORY_BANKS } from '~/utils/bankDirectory'
+import type { TaggedRow } from '~/utils/bankDirectory'
+import { useProductLookup, productLabel, productRateLabel } from '~/composables/useProductLookup'
+
 const emit = defineEmits<{ close: [] }>()
 
 const TENURES = [3, 6, 12, 24, 36, 60]
@@ -7,6 +11,30 @@ const principal = ref(1000000)
 const rate = ref(8.25)
 const tenure = ref(12)
 const result = ref<number | null>(null)
+
+// Optional "fill in a real bank's rate" picker — Bank -> FD plan, so
+// visitors don't have to go find and type in a rate by hand. Only tracked
+// banks appear, since untracked ones have no scraped FD rows to pick from.
+const { allRows, ensureProductsLoaded } = useProductLookup()
+onMounted(() => { ensureProductsLoaded() })
+const FD_BANKS = DIRECTORY_BANKS.filter((b) => b.tracked)
+const pickerBank = ref('')
+const pickerProductId = ref('')
+const pickerProducts = computed<TaggedRow[]>(() => {
+  const bank = FD_BANKS.find((b) => b.slug === pickerBank.value)
+  if (!bank?.apiName) return []
+  return allRows.value
+    .filter((r) => r.kind === 'fd' && r.bank_name === bank.apiName)
+    .sort((a, b) => (a.tenure_value ?? 0) - (b.tenure_value ?? 0))
+})
+watch(pickerBank, () => { pickerProductId.value = '' })
+watch(pickerProductId, (id) => {
+  const row = pickerProducts.value.find((r) => String(r.id) === id)
+  if (!row) return
+  rate.value = row.interest_rate
+  if (row.tenure_value && TENURES.includes(row.tenure_value)) tenure.value = row.tenure_value
+  calculate()
+})
 
 // Simple (non-compounded) interest prorated by tenure, matching how the
 // bank rate tables already quote flat "p.a." rates elsewhere on the site —
@@ -25,6 +53,21 @@ function fmtLkr(n: number) {
 
 <template>
   <CalculatorModal eyebrow="Fixed Deposit" title="FD Calculator" @close="emit('close')">
+    <div class="field">
+      <label for="fd-picker-bank">Use a Real Bank Rate (optional)</label>
+      <select id="fd-picker-bank" v-model="pickerBank">
+        <option value="">Choose a bank…</option>
+        <option v-for="b in FD_BANKS" :key="b.slug" :value="b.slug">{{ b.displayName }}</option>
+      </select>
+    </div>
+    <div v-if="pickerBank" class="field">
+      <label for="fd-picker-product">Fixed Deposit Plan</label>
+      <select id="fd-picker-product" v-model="pickerProductId">
+        <option value="">{{ pickerProducts.length ? 'Choose a plan…' : 'No tracked FD plans for this bank' }}</option>
+        <option v-for="p in pickerProducts" :key="p.id" :value="String(p.id)">{{ productLabel(p) }} — {{ productRateLabel(p) }}</option>
+      </select>
+    </div>
+    <div class="divider" />
     <div class="field">
       <label for="fd-principal">Principal Amount</label>
       <div class="input-suffix">
@@ -58,6 +101,11 @@ function fmtLkr(n: number) {
 <style scoped>
 .field {
   margin-bottom: 0.9rem;
+}
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 0 0.9rem;
 }
 label {
   display: block;

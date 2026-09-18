@@ -5,7 +5,9 @@
 // other "Report Incorrect Information" link on the site already uses,
 // just now collected through a real form instead of a single link.
 import { DIRECTORY_BANKS } from '~/utils/bankDirectory'
+import type { TaggedRow } from '~/utils/bankDirectory'
 import { PRODUCT_TYPE_ORDER, PRODUCT_TYPES } from '~/config/productTypes'
+import { useProductLookup, productLabel, productRateLabel } from '~/composables/useProductLookup'
 
 useHead({ title: 'Report Incorrect Information — FindRate LK' })
 
@@ -13,6 +15,22 @@ const route = useRoute()
 
 const CATEGORY_OPTIONS = PRODUCT_TYPE_ORDER.map((slug) => PRODUCT_TYPES[slug].switcherLabel)
 const ISSUE_TYPES = ['Rate', 'Fee', 'Product Details', 'Eligibility', 'Other']
+
+// Maps a category dropdown's switcherLabel to the real-data shape needed
+// to filter allRows down to that exact product line (see bankDirectory.ts's
+// TaggedRow — 'kind' plus, for loans/cards, the specific category_code).
+const CATEGORY_KIND_MAP: Record<string, { kind: TaggedRow['kind']; categoryCode?: string }> = {
+  'Fixed Deposits': { kind: 'fd' },
+  Savings: { kind: 'savings' },
+  'Housing Loans': { kind: 'loans', categoryCode: 'HOUSING_LOAN' },
+  'Personal Loans': { kind: 'loans', categoryCode: 'PERSONAL_LOAN' },
+  'Gold Loans': { kind: 'loans', categoryCode: 'GOLD_LOAN' },
+  'Credit Cards': { kind: 'cards', categoryCode: 'CREDIT_CARD' },
+  'Debit Cards': { kind: 'cards', categoryCode: 'DEBIT_CARD' }
+}
+
+const { allRows, ensureProductsLoaded } = useProductLookup()
+onMounted(() => { ensureProductsLoaded() })
 
 // Pre-fill + lock when arriving from a specific product's "Report
 // Incorrect Information" link (?bank=hnb&category=Fixed+Deposits&
@@ -45,11 +63,37 @@ watch(prefill, (p) => {
   form.currentValue = p.currentValue
 }, { immediate: true })
 
+// The third "Select Product" dropdown — only meaningful once a Bank and a
+// Category with real data behind it are both picked. Resets whenever
+// either changes so a stale selection from a different bank/category
+// can't linger.
+const selectedProductId = ref('')
+const bankApiName = computed(() => DIRECTORY_BANKS.find((b) => b.displayName === form.bank)?.apiName)
+const categoryMeta = computed(() => CATEGORY_KIND_MAP[form.category])
+const availableProducts = computed<TaggedRow[]>(() => {
+  const meta = categoryMeta.value
+  if (!meta || !bankApiName.value) return []
+  return allRows.value
+    .filter((r) => r.bank_name === bankApiName.value && r.kind === meta.kind && (!meta.categoryCode || r.category_code === meta.categoryCode))
+    .sort((a, b) => (a.tenure_value ?? 0) - (b.tenure_value ?? 0))
+})
+const selectedProduct = computed(() => availableProducts.value.find((p) => String(p.id) === selectedProductId.value))
+
+watch([() => form.bank, () => form.category], () => {
+  if (isLocked.value) return
+  selectedProductId.value = ''
+  form.currentValue = ''
+})
+watch(selectedProduct, (p) => {
+  if (p) form.currentValue = productRateLabel(p)
+})
+
 function startNewReport() {
   isLocked.value = false
   form.bank = ''
   form.category = ''
   form.currentValue = ''
+  selectedProductId.value = ''
   navigateTo('/report-issue')
 }
 
@@ -75,7 +119,9 @@ const submitError = ref('')
 async function submit() {
   if (!validate()) return
   submitError.value = ''
-  const productBit = prefill.value.product ? ` — ${prefill.value.product}` : ''
+  const productBit = prefill.value.product
+    ? ` — ${prefill.value.product}`
+    : selectedProduct.value ? ` — ${productLabel(selectedProduct.value)}` : ''
   try {
     await $fetch('/api/v1/user-reports', {
       method: 'POST',
@@ -138,6 +184,22 @@ async function submit() {
               </select>
             </div>
 
+            <div v-if="!isLocked && categoryMeta">
+              <label class="mb-1 block text-sm font-semibold text-navy">Select Product</label>
+              <select
+                v-model="selectedProductId"
+                :disabled="!bankApiName"
+                class="w-full rounded-lg border border-card-border bg-white px-3 py-2.5 text-sm text-navy disabled:bg-page disabled:text-muted"
+              >
+                <option value="">
+                  {{ !bankApiName ? 'Choose a bank first' : availableProducts.length ? 'Choose a product (auto-fills current rate)' : 'No tracked products for this bank/category' }}
+                </option>
+                <option v-for="p in availableProducts" :key="p.id" :value="String(p.id)">
+                  {{ productLabel(p) }} — {{ productRateLabel(p) }}
+                </option>
+              </select>
+            </div>
+
             <div>
               <label class="mb-2 block text-sm font-semibold text-navy">Issue Type <span class="text-red-500">*</span></label>
               <div class="flex flex-wrap gap-x-5 gap-y-2">
@@ -151,7 +213,7 @@ async function submit() {
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label class="mb-1 block text-sm font-semibold text-navy">Current Displayed Value</label>
-                <input v-model="form.currentValue" type="text" readonly placeholder="e.g. 12.50% p.a." class="w-full rounded-lg border border-card-border bg-page px-3 py-2.5 text-sm text-muted">
+                <input v-model="form.currentValue" type="text" readonly placeholder="Select a product above to auto-fill" class="w-full rounded-lg border border-card-border bg-page px-3 py-2.5 text-sm text-muted">
               </div>
               <div>
                 <label class="mb-1 block text-sm font-semibold text-navy">Correct Value <span class="text-red-500">*</span></label>

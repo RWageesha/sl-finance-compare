@@ -27,11 +27,17 @@ const PAD_BOTTOM = 36
 const gradientId = `rtc-fill-${Math.random().toString(36).slice(2)}`
 
 const rates = computed(() => props.points.map((p) => p.rate))
-const minRate = computed(() => Math.min(...rates.value))
-const maxRate = computed(() => Math.max(...rates.value))
-// Give a flat series (all points equal) some visual headroom instead of a
-// zero-height range collapsing the line onto one edge.
-const range = computed(() => Math.max(maxRate.value - minRate.value, 0.25))
+const avgRate = computed(() => rates.value.reduce((sum, r) => sum + r, 0) / (rates.value.length || 1))
+// Zero-based scale sized to 2x the series average, rather than a window
+// stretched tightly between the series' own min and max — that dynamic
+// window collapses to zero height for a flat series (every point the
+// same rate, which is common — many products go months between changes)
+// and pins the line to the very bottom of the chart instead of showing it
+// with any visual body. Anchoring to 2x the average instead means a flat
+// series always sits at the vertical center, and a real change still
+// reads as a clear rise/fall around that center rather than needing the
+// chart to re-scale itself to whatever the data happens to be.
+const domainMax = computed(() => (avgRate.value > 0 ? avgRate.value * 2 : Math.max(...rates.value, 1)))
 
 function x(i: number): number {
   const n = props.points.length
@@ -41,7 +47,7 @@ function x(i: number): number {
 
 function y(rate: number): number {
   const h = HEIGHT.value
-  const t = (rate - minRate.value) / range.value
+  const t = domainMax.value > 0 ? Math.min(Math.max(rate / domainMax.value, 0), 1) : 0
   return h - PAD_BOTTOM - t * (h - PAD_TOP - PAD_BOTTOM)
 }
 
@@ -84,9 +90,12 @@ function dotTitle(p: { date: string; rate: number }): string {
         :y2="PAD_TOP + frac * (axisY - PAD_TOP)"
         class="gridline"
       />
+      <text v-if="large" :x="WIDTH - PAD_X" :y="PAD_TOP + 0.5 * (axisY - PAD_TOP) - 6" class="axis-label avg-label" text-anchor="end">
+        Avg {{ avgRate.toFixed(2) }}%
+      </text>
       <line :x1="PAD_X" :y1="axisY" :x2="WIDTH - PAD_X" :y2="axisY" class="axis" />
-      <text :x="4" :y="PAD_TOP - 8" class="axis-label">{{ maxRate.toFixed(2) }}%</text>
-      <text :x="4" :y="axisY - 6" class="axis-label">{{ minRate.toFixed(2) }}%</text>
+      <text :x="4" :y="PAD_TOP - 8" class="axis-label">{{ domainMax.toFixed(2) }}%</text>
+      <text :x="4" :y="axisY - 6" class="axis-label">0%</text>
 
       <polygon v-if="large" :points="areaPoints" :fill="`url(#${gradientId})`" stroke="none" />
       <polyline :points="linePoints" class="line" fill="none" />
@@ -122,6 +131,11 @@ svg {
 .axis-label {
   fill: var(--muted);
   font-size: 11px;
+}
+.avg-label {
+  fill: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
 }
 .date-label {
   fill: var(--muted);

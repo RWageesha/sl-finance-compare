@@ -66,7 +66,7 @@ const NAV_ITEMS: NavItem[] = [
     href: '/rates',
     children: [
       { label: 'All Rates', href: '/rates' },
-      { label: 'Rate History', href: '/products' }
+      { label: 'Data', href: '/data' }
     ]
   }
 ]

@@ -127,8 +127,15 @@ cd scraper
 python -m venv .venv
 .venv/Scripts/activate        # Windows; use `source .venv/bin/activate` on Linux/macOS
 pip install -r requirements.txt
+playwright install chromium   # one-time; needed by any bank fetched via a real browser (see below)
 python main.py                # reads DATABASE_URL from ../.env
 ```
+
+`playwright install chromium` downloads its own Chromium build (~150MB) — this
+is a real dependency, not optional, for the banks that need it (see Sampath/
+Pan Asia below). Any environment that runs `main.py` (a scheduled task, a
+Render Cron Job, a CI workflow) needs both `pip install -r requirements.txt`
+and `playwright install chromium` in its setup step, not just the former.
 
 Runs every configured bank/product scraper in turn, normalizes each result
 onto the shared schema (see `normalize.py`), and inserts it into
@@ -160,6 +167,26 @@ and the process only exits non-zero if at least one failed.
   "Rupee Fixed Deposits", "Housing Loans"). Cells are trilingual
   (Sinhala/Tamil/English, `<br>`-separated); the parser keeps only the
   English segment.
+
+- **People's Bank**: `banks/peoples.py` parses one `interest-rates` page
+  covering FD, Savings, and Loans with plain `requests` — no WAF issue.
+
+- **Sampath Bank**: sits behind an F5 WAF that returns a 503 for plain
+  HTTP requests, even with a realistic browser User-Agent — confirmed by
+  hand. `banks/sampath.py` fetches its FD and Savings pages with a real
+  headless Chromium via Playwright instead (the WAF keys off browser
+  fingerprint, not IP reputation). Loan rates come from a separate,
+  plain-curl-accessible PDF. Two real quirks on Sampath's own site limit
+  coverage here: its "Rates & Charges" hub page has a bug where the Term
+  Deposits and Loan Rates tabs render the same content as the Savings
+  tab (so only one clean, unambiguous savings table — "Hit Saver" — is
+  scraped from it), and the loan PDF's merged-cell table only yields a
+  product+rate pair for rows that aren't split across a multi-tenure
+  grid.
+
+- **Pan Asia Bank**: also behind a WAF (Sucuri) that blocks plain HTTP
+  requests; not yet integrated as of this writing — same
+  Playwright-based approach as Sampath is the way in whenever it is.
 
 ### Running the scraper on a schedule
 
@@ -298,3 +325,12 @@ Manual"/"Run All Scrapers" buttons — see their code comments). Point its
 own `DATABASE_URL` at the same Supabase database, and schedule it
 however you're already running it (GitHub Actions manual-dispatch or a
 Render Cron Job) — nothing about this deploy changes that setup.
+
+Whichever scheduler runs it, its build/setup step must run BOTH
+`pip install -r requirements.txt` AND `playwright install chromium` (or
+`playwright install --with-deps chromium` on a bare Linux image) — Sampath
+and Pan Asia are fetched with a real headless browser (see "Running the
+scraper" above), so `pip install` alone isn't enough; the scraper will
+fail on just those two banks with a "Executable doesn't exist" error if
+the browser was never installed. On a Render Cron Job, set the build
+command to `pip install -r scraper/requirements.txt && playwright install --with-deps chromium`.

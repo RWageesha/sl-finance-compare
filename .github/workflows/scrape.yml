@@ -23,6 +23,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r scraper/requirements.txt
 
+      - name: Install Playwright browser
+        # Sampath/Pan Asia are fetched with a real headless browser (their
+        # sites WAF-block plain HTTP requests) — see README's "Running the
+        # scraper" section.
+        run: playwright install --with-deps chromium
+
       - name: Run scraper
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

@@ -68,7 +68,17 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     logoExt: 'jpeg'
     // No -small variant provided for BOC — BankLogo falls back to logoExt.
   },
-  { slug: 'sampath', displayName: 'Sampath Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  {
+    slug: 'sampath',
+    apiName: 'Sampath Bank',
+    displayName: 'Sampath Bank',
+    type: 'Commercial Bank',
+    icon: 'bank',
+    tracked: true,
+    sourceUrl: 'https://www.sampath.lk/rates-and-charges',
+    logoExt: 'png',
+    logoSmallExt: 'png'
+  },
   {
     slug: 'ndb',
     apiName: 'National Development Bank',
@@ -82,7 +92,17 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
   },
   { slug: 'seylan', displayName: 'Seylan Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
   { slug: 'dfcc', displayName: 'DFCC Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
-  { slug: 'peoples', displayName: "People's Bank", type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  {
+    slug: 'peoples',
+    apiName: "People's Bank",
+    displayName: "People's Bank",
+    type: 'Commercial Bank',
+    icon: 'bank',
+    tracked: true,
+    sourceUrl: 'https://www.peoplesbank.lk/interest-rates/',
+    logoExt: 'png',
+    logoSmallExt: 'png'
+  },
   {
     slug: 'nsb',
     displayName: 'National Savings Bank (NSB)',
@@ -94,7 +114,17 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     logoExt: 'png',
     logoSmallExt: 'png'
   },
-  { slug: 'panasia', displayName: 'Pan Asia Banking Corporation', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  {
+    slug: 'panasia',
+    apiName: 'Pan Asia Banking Corporation',
+    displayName: 'Pan Asia Banking Corporation',
+    type: 'Commercial Bank',
+    icon: 'bank',
+    tracked: true,
+    sourceUrl: 'https://www.pabcbank.com/fixed-deposits-rates/',
+    logoExt: 'png',
+    logoSmallExt: 'png'
+  },
   { slug: 'union', displayName: 'Union Bank of Colombo', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
   { slug: 'amana', displayName: 'Amana Bank', type: 'Licensed Commercial Bank', icon: 'moon', tracked: false, logoExt: 'png', logoSmallExt: 'png' }
 ]

@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 import normalize
 import validate
-from banks import boc, combank, hnb, ndb, nsb
+from banks import boc, combank, hnb, ndb, nsb, panasia, peoples, sampath
 from db import DB, ProductRate, ScrapeRun
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -341,6 +341,122 @@ def _scrape_nsb(db: DB) -> tuple[int, list[Exception]]:
     return attempted, errors
 
 
+def _scrape_peoples(db: DB) -> tuple[int, list[Exception]]:
+    """People's Bank publishes Fixed Deposit, Savings, and Loan rates all
+    on one interest-rates page — one fetch, three parses, same shape as
+    HNB/BOC. Returns (sources_attempted, errors).
+    """
+    log.info("peoples: fetching rates page")
+    html = peoples.fetch_rates_page()
+
+    bank_id = db.get_or_create_bank(peoples.BANK_NAME, peoples.BANK_CODE)
+    errors: list[Exception] = []
+    attempted = 0
+
+    def fd() -> int:
+        rows = peoples.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(peoples.BANK_NAME), db, bank_id, "peoples")
+        db.insert_product_rates(product_rates)
+        log.info("peoples: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def savings() -> int:
+        rows = peoples.parse_savings(html)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "peoples")
+        db.insert_product_rates(product_rates)
+        log.info("peoples: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def loans() -> int:
+        rows = peoples.parse_loans(html)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "peoples")
+        db.insert_product_rates(product_rates)
+        log.info("peoples: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, fn in (("peoples-fixed-deposits", fd), ("peoples-savings", savings), ("peoples-loans", loans)):
+        attempted += 1
+        err = _run_scrape(db, bank_id, label, peoples.RATES_URL, fn)
+        if err is not None:
+            log.warning("peoples: %s: %s", label, err)
+            errors.append(err)
+
+    return attempted, errors
+
+
+def _scrape_sampath(db: DB) -> tuple[int, list[Exception]]:
+    """Sampath publishes FD and Savings on separate pages (both fetched
+    with a real headless browser — see sampath.py's module docstring for
+    why) and Loans in a standalone PDF. Three fetches, three parses.
+    Returns (sources_attempted, errors).
+    """
+    errors: list[Exception] = []
+    attempted = 0
+    bank_id = db.get_or_create_bank(sampath.BANK_NAME, sampath.BANK_CODE)
+
+    def fd() -> int:
+        html = sampath.fetch_fd_page()
+        rows = sampath.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(sampath.BANK_NAME), db, bank_id, "sampath")
+        db.insert_product_rates(product_rates)
+        log.info("sampath: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def savings() -> int:
+        html = sampath.fetch_savings_page()
+        rows = sampath.parse_savings(html)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "sampath")
+        db.insert_product_rates(product_rates)
+        log.info("sampath: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def loans() -> int:
+        pdf_bytes = sampath.fetch_loans_pdf()
+        rows = sampath.parse_loans(pdf_bytes)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "sampath")
+        db.insert_product_rates(product_rates)
+        log.info("sampath: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, source_url, fn in (
+        ("sampath-fixed-deposits", sampath.FD_URL, fd),
+        ("sampath-savings", sampath.SAVINGS_URL, savings),
+        ("sampath-loans", sampath.LOANS_PDF_URL, loans),
+    ):
+        attempted += 1
+        log.info("sampath: fetching %s", label)
+        err = _run_scrape(db, bank_id, label, source_url, fn)
+        if err is not None:
+            log.warning("sampath: %s: %s", label, err)
+            errors.append(err)
+
+    return attempted, errors
+
+
+def _scrape_panasia(db: DB) -> tuple[int, list[Exception]]:
+    """Pan Asia only has Fixed Deposits scraped so far (see panasia.py's
+    module docstring — its WAF rate-limits/blocks aggressively enough
+    that savings/loan page research hasn't been completed yet). Returns
+    (sources_attempted, errors).
+    """
+    bank_id = db.get_or_create_bank(panasia.BANK_NAME, panasia.BANK_CODE)
+
+    def fd() -> int:
+        html = panasia.fetch_fd_page()
+        rows = panasia.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(panasia.BANK_NAME), db, bank_id, "panasia")
+        db.insert_product_rates(product_rates)
+        log.info("panasia: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    log.info("panasia: fetching fixed deposit rates")
+    err = _run_scrape(db, bank_id, "panasia-fixed-deposits", panasia.FD_URL, fd)
+    if err is not None:
+        log.warning("panasia: fixed-deposits: %s", err)
+        return 1, [err]
+    return 1, []
+
+
 def run() -> tuple[int, list[Exception]]:
     """Returns (sources_attempted, errors) rather than just errors — a
     source here is one scrape target within a bank (e.g. "combank-loans"),
@@ -365,7 +481,7 @@ def run() -> tuple[int, list[Exception]]:
         # shouldn't block scraping the others, so run every scraper and
         # only report failure at the end (still surfacing every individual
         # error via log).
-        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc, _scrape_ndb, _scrape_nsb):
+        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc, _scrape_ndb, _scrape_nsb, _scrape_peoples, _scrape_sampath, _scrape_panasia):
             try:
                 attempted, bank_errors = scrape_bank(db)
                 total_attempted += attempted

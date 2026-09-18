@@ -308,8 +308,12 @@ no separate frontend host, no separate worker.
   at the repo root and provisions the `findrate-lk` web service
   automatically.
 - On first deploy, Render will prompt for `DATABASE_URL` (it's declared
-  `sync: false` in `render.yaml` so it's never committed) — paste the
-  same Supabase connection string from step 1.
+  `sync: false` in `render.yaml` so it's never committed). Render is an
+  IPv4-only host, while Supabase's direct `db.<project-ref>.supabase.co`
+  endpoint is IPv6 by default. Therefore paste the **Session pooler** URL
+  from Supabase **Connect** (port `5432`, hostname ending in
+  `pooler.supabase.com`) and include `?sslmode=require`; do not use the
+  direct connection URL unless the Supabase IPv4 add-on is enabled.
 - Render injects `PORT` automatically; `cmd/api/main.go` already binds
   to it, no extra config needed.
 - Once live, the whole site (public pages, the API, and `/admin`) is
@@ -322,7 +326,9 @@ The Python scraper (`scraper/`) is a separate concern from this
 service — it writes directly to Postgres and isn't invoked by the Go
 API in production (only in local dev, via the admin panel's "Run
 Manual"/"Run All Scrapers" buttons — see their code comments). Point its
-own `DATABASE_URL` at the same Supabase database, and schedule it
+own `DATABASE_URL` at the same Supabase database. On Render it must use the
+Supabase **Session pooler** URL (port `5432`) rather than the IPv6 direct URL;
+paste it as one line, including `?sslmode=require`. Then schedule it
 however you're already running it (GitHub Actions manual-dispatch or a
 Render Cron Job) — nothing about this deploy changes that setup.
 

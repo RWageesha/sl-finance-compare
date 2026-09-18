@@ -470,7 +470,11 @@ def run() -> tuple[int, list[Exception]]:
     """
     load_dotenv()
 
-    conn_string = os.environ.get("DATABASE_URL")
+    # Render's environment-variable editor can retain a trailing newline when
+    # a connection URL is pasted. Whitespace is never meaningful in a
+    # PostgreSQL URL, and without trimming it Postgres treats e.g.
+    # "postgres\\n" as a different database name.
+    conn_string = os.environ.get("DATABASE_URL", "").strip()
     if not conn_string:
         raise RuntimeError("DATABASE_URL is not set (check your .env file)")
 

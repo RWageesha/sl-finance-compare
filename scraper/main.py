@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 import normalize
 import validate
-from banks import boc, combank, hnb, ndb, nsb, panasia, peoples, sampath
+from banks import amana, boc, combank, dfcc, hnb, lbfinance, lolc, ndb, nsb, panasia, peoples, sampath
 from db import DB, ProductRate, ScrapeRun
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -476,6 +476,110 @@ def _scrape_panasia(db: DB) -> tuple[int, list[Exception]]:
     return 1, []
 
 
+def _scrape_amana(db: DB) -> tuple[int, list[Exception]]:
+    """Amana publishes Fixed Deposit and Savings rates together on one
+    profit-rates page — one fetch, two parses. No loan rates (see
+    amana.py's module docstring). Returns (sources_attempted, errors).
+    """
+    log.info("amana: fetching profit rates page")
+    html = amana.fetch_rates_page()
+
+    bank_id = db.get_or_create_bank(amana.BANK_NAME, amana.BANK_CODE)
+    errors: list[Exception] = []
+    attempted = 0
+
+    def fd() -> int:
+        rows = amana.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(amana.BANK_NAME), db, bank_id, "amana")
+        db.insert_product_rates(product_rates)
+        log.info("amana: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    def savings() -> int:
+        rows = amana.parse_savings(html)
+        product_rates = _normalize_all(rows, normalize.savings, db, bank_id, "amana")
+        db.insert_product_rates(product_rates)
+        log.info("amana: inserted %d savings rate(s)", len(product_rates))
+        return len(product_rates)
+
+    for label, fn in (("amana-fixed-deposits", fd), ("amana-savings", savings)):
+        attempted += 1
+        err = _run_scrape(db, bank_id, label, amana.RATES_URL, fn)
+        if err is not None:
+            log.warning("amana: %s: %s", label, err)
+            errors.append(err)
+
+    return attempted, errors
+
+
+def _scrape_lolc(db: DB) -> tuple[int, list[Exception]]:
+    """LOLC Finance: Fixed Deposits only (see lolc.py's module docstring
+    for why savings/loans aren't scraped). Returns (sources_attempted,
+    errors).
+    """
+    bank_id = db.get_or_create_bank(lolc.BANK_NAME, lolc.BANK_CODE)
+
+    def fd() -> int:
+        html = lolc.fetch_fd_page()
+        rows = lolc.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(lolc.BANK_NAME), db, bank_id, "lolc")
+        db.insert_product_rates(product_rates)
+        log.info("lolc: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    log.info("lolc: fetching fixed deposit rates")
+    err = _run_scrape(db, bank_id, "lolc-fixed-deposits", lolc.FD_URL, fd)
+    if err is not None:
+        log.warning("lolc: fixed-deposits: %s", err)
+        return 1, [err]
+    return 1, []
+
+
+def _scrape_lbfinance(db: DB) -> tuple[int, list[Exception]]:
+    """LB Finance: Fixed Deposits only (see lbfinance.py's module
+    docstring for why savings/loans aren't scraped). Returns
+    (sources_attempted, errors).
+    """
+    bank_id = db.get_or_create_bank(lbfinance.BANK_NAME, lbfinance.BANK_CODE)
+
+    def fd() -> int:
+        html = lbfinance.fetch_fd_page()
+        rows = lbfinance.parse_fixed_deposits(html)
+        product_rates = _normalize_all(rows, normalize.fixed_deposit_for(lbfinance.BANK_NAME), db, bank_id, "lbfinance")
+        db.insert_product_rates(product_rates)
+        log.info("lbfinance: inserted %d fixed deposit rate(s)", len(product_rates))
+        return len(product_rates)
+
+    log.info("lbfinance: fetching fixed deposit rates")
+    err = _run_scrape(db, bank_id, "lbfinance-fixed-deposits", lbfinance.FD_URL, fd)
+    if err is not None:
+        log.warning("lbfinance: fixed-deposits: %s", err)
+        return 1, [err]
+    return 1, []
+
+
+def _scrape_dfcc(db: DB) -> tuple[int, list[Exception]]:
+    """DFCC: Loan rates only (see dfcc.py's module docstring for why FD/
+    savings aren't scraped). Returns (sources_attempted, errors).
+    """
+    bank_id = db.get_or_create_bank(dfcc.BANK_NAME, dfcc.BANK_CODE)
+
+    def loans() -> int:
+        html = dfcc.fetch_rates_page()
+        rows = dfcc.parse_loans(html)
+        product_rates = _normalize_all(rows, normalize.loan, db, bank_id, "dfcc")
+        db.insert_product_rates(product_rates)
+        log.info("dfcc: inserted %d loan rate(s)", len(product_rates))
+        return len(product_rates)
+
+    log.info("dfcc: fetching rates & tariff page")
+    err = _run_scrape(db, bank_id, "dfcc-loans", dfcc.RATES_URL, loans)
+    if err is not None:
+        log.warning("dfcc: loans: %s", err)
+        return 1, [err]
+    return 1, []
+
+
 def run() -> tuple[int, list[Exception]]:
     """Returns (sources_attempted, errors) rather than just errors — a
     source here is one scrape target within a bank (e.g. "combank-loans"),
@@ -504,7 +608,20 @@ def run() -> tuple[int, list[Exception]]:
         # shouldn't block scraping the others, so run every scraper and
         # only report failure at the end (still surfacing every individual
         # error via log).
-        for scrape_bank in (_scrape_hnb, _scrape_combank, _scrape_boc, _scrape_ndb, _scrape_nsb, _scrape_peoples, _scrape_sampath, _scrape_panasia):
+        for scrape_bank in (
+            _scrape_hnb,
+            _scrape_combank,
+            _scrape_boc,
+            _scrape_ndb,
+            _scrape_nsb,
+            _scrape_peoples,
+            _scrape_sampath,
+            _scrape_panasia,
+            _scrape_amana,
+            _scrape_lolc,
+            _scrape_lbfinance,
+            _scrape_dfcc,
+        ):
             try:
                 attempted, bank_errors = scrape_bank(db)
                 total_attempted += attempted

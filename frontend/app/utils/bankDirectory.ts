@@ -14,7 +14,7 @@ export interface DirectoryBank {
    * and must match migrations/002_seed.sql exactly. */
   apiName?: string
   displayName: string
-  type: 'Commercial Bank' | 'Savings Bank' | 'Licensed Commercial Bank'
+  type: 'Commercial Bank' | 'Savings Bank' | 'Licensed Commercial Bank' | 'Licensed Finance Company'
   icon: 'bank' | 'savings' | 'moon'
   tracked: boolean
   /** The bank's real published rates page, taken directly from the
@@ -32,7 +32,7 @@ export interface DirectoryBank {
   logoSmallExt?: 'png' | 'jpeg' | 'svg'
 }
 
-export const BANK_TYPES = ['Commercial Bank', 'Savings Bank', 'Licensed Commercial Bank'] as const
+export const BANK_TYPES = ['Commercial Bank', 'Savings Bank', 'Licensed Commercial Bank', 'Licensed Finance Company'] as const
 
 export const DIRECTORY_BANKS: DirectoryBank[] = [
   {
@@ -91,7 +91,17 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     logoSmallExt: 'png'
   },
   { slug: 'seylan', displayName: 'Seylan Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
-  { slug: 'dfcc', displayName: 'DFCC Bank', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
+  {
+    slug: 'dfcc',
+    apiName: 'DFCC Bank',
+    displayName: 'DFCC Bank',
+    type: 'Commercial Bank',
+    icon: 'bank',
+    tracked: true,
+    sourceUrl: 'https://www.dfcc.lk/rates-and-tariff',
+    logoExt: 'png',
+    logoSmallExt: 'png'
+  },
   {
     slug: 'peoples',
     apiName: "People's Bank",
@@ -126,7 +136,35 @@ export const DIRECTORY_BANKS: DirectoryBank[] = [
     logoSmallExt: 'png'
   },
   { slug: 'union', displayName: 'Union Bank of Colombo', type: 'Commercial Bank', icon: 'bank', tracked: false, logoExt: 'png', logoSmallExt: 'png' },
-  { slug: 'amana', displayName: 'Amana Bank', type: 'Licensed Commercial Bank', icon: 'moon', tracked: false, logoExt: 'png', logoSmallExt: 'png' }
+  {
+    slug: 'amana',
+    apiName: 'Amana Bank',
+    displayName: 'Amana Bank',
+    type: 'Licensed Commercial Bank',
+    icon: 'moon',
+    tracked: true,
+    sourceUrl: 'https://www.amanabank.lk/profit-sharing-ratios/local-currency-accounts-paid.html',
+    logoExt: 'png',
+    logoSmallExt: 'png'
+  },
+  {
+    slug: 'lbfinance',
+    apiName: 'LB Finance',
+    displayName: 'LB Finance PLC',
+    type: 'Licensed Finance Company',
+    icon: 'bank',
+    tracked: true,
+    sourceUrl: 'https://www.lbfinance.com/fixed-deposits/fixed-deposits'
+  },
+  {
+    slug: 'lolc',
+    apiName: 'LOLC Finance',
+    displayName: 'LOLC Finance PLC',
+    type: 'Licensed Finance Company',
+    icon: 'bank',
+    tracked: true,
+    sourceUrl: 'https://www.lolcfinance.com/rates-and-returns/interest-rates/'
+  }
 ]
 
 export function findDirectoryBank(slug: string): DirectoryBank | undefined {

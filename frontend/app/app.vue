@@ -2,6 +2,7 @@
   <div>
     <NuxtPage />
     <SkyscraperRails />
+    <AdOverlay />
   </div>
 </template>
 

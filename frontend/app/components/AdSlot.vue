@@ -2,53 +2,114 @@
 // A generic ad placement — fills whatever box its call site sizes it to
 // (skyscraper rail, homepage banner, footer strip, etc. all use the same
 // component with different wrapper CSS). Renders nothing when the slot
-// has no active ads, so an empty slot never leaves a visible gap. When a
-// slot has more than one active ad, rotates between them on a timer —
-// this is the "several ads share one space" / "sliding advertisement"
-// behavior from the feature request, with no carousel library needed.
+// has no qualifying ad, so an empty slot never leaves a visible gap.
+//
+// One ad is chosen per page load (weighted-random among every ad
+// currently placed on this slot, filtered to ads allowed on this
+// device) — this is the Ad Manager wizard's own rotation rule: several
+// ads sharing a slot rotate across page loads, weighted by `weight`,
+// not in a live in-page carousel. A single ad's own multiple creatives
+// (the Slider style) DO rotate live within that one ad, via
+// `activeCreative` below.
 import type { SiteAd } from '~/composables/useSiteContent'
 
 const props = defineProps<{ slotKey: string }>()
 
 const { fetchAds } = useSiteContent()
-const ads = ref<SiteAd[]>([])
+const ad = ref<SiteAd | null>(null)
 const current = ref(0)
 let timer: ReturnType<typeof setInterval> | null = null
 
-const ROTATE_MS = 6000
+function deviceMatches(devices: string): boolean {
+  if (devices === 'all') return true
+  const isMobile = window.matchMedia('(max-width: 767px)').matches
+  return devices === 'mobile' ? isMobile : !isMobile
+}
+
+function weightedPick(ads: SiteAd[]): SiteAd {
+  const total = ads.reduce((sum, a) => sum + (a.weight || 1), 0)
+  if (total <= 0) return ads[0]
+  let r = Math.random() * total
+  for (const a of ads) {
+    r -= a.weight || 1
+    if (r <= 0) return a
+  }
+  return ads[ads.length - 1]
+}
 
 onMounted(async () => {
-  ads.value = await fetchAds(props.slotKey).catch(() => [])
-  if (ads.value.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const all = await fetchAds(props.slotKey).catch(() => [])
+  const candidates = all.filter((a) => deviceMatches(a.devices) && a.creatives.length > 0)
+  if (candidates.length === 0) return
+  ad.value = weightedPick(candidates)
+  if (ad.value.style === 'slider' && ad.value.creatives.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const intervalSeconds = Number(ad.value.settings?.interval_seconds) || 5
     timer = setInterval(() => {
-      current.value = (current.value + 1) % ads.value.length
-    }, ROTATE_MS)
+      current.value = (current.value + 1) % (ad.value?.creatives.length || 1)
+    }, intervalSeconds * 1000)
   }
 })
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
-const activeAd = computed(() => ads.value[current.value] ?? null)
+const gapPx = computed(() => Number(ad.value?.settings?.gap_px) || 12)
+const activeCreative = computed(() => ad.value?.creatives[current.value] ?? null)
 </script>
 
 <template>
-  <a
-    v-if="activeAd"
-    :href="activeAd.target_url"
-    target="_blank"
-    rel="noopener sponsored"
-    class="ad-slot"
-    :aria-label="activeAd.title"
-  >
+  <div v-if="ad" class="ad-slot">
     <span class="ad-tag">Advertisement</span>
-    <img :src="activeAd.image_url" :alt="activeAd.title" class="ad-img">
-  </a>
+
+    <a
+      v-if="(ad.style === 'image' || ad.style === 'gif' || ad.style === 'slider') && activeCreative"
+      :href="activeCreative.target_url"
+      target="_blank"
+      rel="noopener sponsored"
+      class="ad-fill"
+      :aria-label="activeCreative.alt_text || ad.title"
+    >
+      <img :src="activeCreative.media_url" :alt="activeCreative.alt_text || ad.title" class="ad-img">
+    </a>
+
+    <a
+      v-else-if="ad.style === 'video' && ad.creatives[0]"
+      :href="ad.creatives[0].target_url"
+      target="_blank"
+      rel="noopener sponsored"
+      class="ad-fill"
+      :aria-label="ad.creatives[0].alt_text || ad.title"
+    >
+      <video
+        :src="ad.creatives[0].media_url"
+        :poster="ad.creatives[0].poster_url || undefined"
+        class="ad-img"
+        autoplay
+        muted
+        loop
+        playsinline
+      />
+    </a>
+
+    <div v-else-if="ad.style === 'shared'" class="ad-fill flex" :class="ad.layout === 'vertical' ? 'flex-col' : 'flex-row'" :style="{ gap: `${gapPx}px` }">
+      <a
+        v-for="c in ad.creatives"
+        :key="c.id"
+        :href="c.target_url"
+        target="_blank"
+        rel="noopener sponsored"
+        class="ad-tile"
+        :aria-label="c.alt_text || ad.title"
+      >
+        <img :src="c.media_url" :alt="c.alt_text || ad.title" class="ad-img">
+      </a>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-/* No width/height here on purpose — every call site passes its own
-   sizing classes (h-24, w-40, etc.) straight onto <AdSlot>, and a
+/* No width/height on .ad-slot on purpose — every call site passes its
+   own sizing classes (h-24, w-40, etc.) straight onto <AdSlot>, and a
    fixed width/height in scoped CSS would win the cascade over those
    (Vue's data-v-* attribute selector makes scoped rules more specific
    than a plain Tailwind utility class) and silently override them. */
@@ -57,6 +118,16 @@ const activeAd = computed(() => ads.value[current.value] ?? null)
   overflow: hidden;
   border-radius: 12px;
   background: var(--page, #f8fafc);
+}
+.ad-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ad-tile {
+  flex: 1;
+  min-width: 0;
+  display: block;
 }
 .ad-img {
   width: 100%;

@@ -5,11 +5,24 @@
 // build) so an admin edit reaches visitors without a rebuild — see
 // migrations/007_site_editor.sql for why.
 
+export interface AdCreative {
+  id: number
+  position: number
+  media_url: string
+  target_url: string
+  alt_text: string | null
+  poster_url: string | null
+}
+
 export interface SiteAd {
   id: number
   title: string
-  image_url: string
-  target_url: string
+  layout: 'horizontal' | 'vertical'
+  style: 'image' | 'gif' | 'video' | 'slider' | 'shared' | 'overlay'
+  settings: Record<string, unknown>
+  devices: 'all' | 'desktop' | 'mobile'
+  weight: number
+  creatives: AdCreative[]
 }
 
 export interface SiteSection {

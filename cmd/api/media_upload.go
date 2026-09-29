@@ -41,8 +41,8 @@ func handleAdminMediaUpload() http.HandlerFunc {
 			bucket = defaultStorageBucket
 		}
 
-		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10MB cap
-			writeJSONError(w, http.StatusBadRequest, "file too large or invalid form (10MB max)")
+		if err := r.ParseMultipartForm(25 << 20); err != nil { // 25MB cap — raised for short video ad creatives
+			writeJSONError(w, http.StatusBadRequest, "file too large or invalid form (25MB max)")
 			return
 		}
 		file, header, err := r.FormFile("file")

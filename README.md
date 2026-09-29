@@ -19,7 +19,9 @@ frontend/                   Nuxt 3 app — source of truth for the frontend;
   app/utils/format.ts         fmtDate/fmtTenure/formatCategoryLabel
 
 web/                        Generated static output of `frontend/` (nuxt generate) —
-                             build artifact, never hand-edit; served as-is by cmd/api
+                             build artifact, never hand-edit, not committed to git;
+                             Render's build command regenerates it fresh on every
+                             deploy (see render.yaml); served as-is by cmd/api
 
 scraper/                    Python data collection — see "Running the scraper" below
   main.py                   Orchestrates every bank/product-type scrape
@@ -242,16 +244,20 @@ npm run dev                # in another terminal — Nuxt on :3000
 Nuxt dev server to the Go API, so every page fetches the same relative
 `/api/v1/...` paths in dev and in production (same-origin once built).
 
-Building for deploy:
+Testing the real static build locally (what Render actually deploys):
 
 ```sh
 cd frontend
 npm run generate           # writes static output into ../web
+cd ..
+go run ./cmd/api            # serves web/ standalone, no Nuxt dev server involved
 ```
 
-Commit the resulting `web/` changes along with your `frontend/` changes —
-Render's deploy just builds and runs the Go binary (no Node build step),
-so the generated static files need to already be in the repo.
+`web/` is gitignored — nothing to commit here. Render's build command
+(see `render.yaml`) runs `npm ci && npm run generate` itself before
+building the Go binary, so the static site is always built fresh from
+`frontend/` source on every deploy. The Node version used for that build
+is pinned in `.node-version` at the repo root.
 
 ## Verifying data in Postgres
 

@@ -1,8 +1,12 @@
 # Render Blueprint — one web service running the Go API, which also
 # serves the prerendered Nuxt static site from web/ (see cmd/api/main.go's
 # spaFileServer) and the /admin panel. There's nothing else to deploy
-# here: the frontend build is already committed as a static artifact in
-# web/, so this is a single deployable service, not a two-service setup.
+# here: the build command generates the Nuxt static site into web/ from
+# frontend/ source fresh on every deploy (Render's Go native runtime
+# includes Node/npm for exactly this), so web/ is a build artifact only —
+# it isn't committed to git, and this stays a single deployable service,
+# not a two-service setup. The Node version is pinned in .node-version at
+# the repo root.
 #
 # DATABASE_URL is intentionally left unset here (sync: false) — set it in
 # the Render dashboard on first deploy to your Supabase Postgres
@@ -12,7 +16,7 @@ services:
     name: findrate-lk
     runtime: go
     plan: free
-    buildCommand: go build -o bin/api ./cmd/api
+    buildCommand: cd frontend && npm ci && npm run generate && cd .. && go build -o bin/api ./cmd/api
     startCommand: ./bin/api
     healthCheckPath: /healthz
     envVars:

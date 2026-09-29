@@ -1,1 +1,0 @@
-import{r as e}from"./C6E1_Jdm.js";var t=e(`/brand/logo-black.png`);export{t};

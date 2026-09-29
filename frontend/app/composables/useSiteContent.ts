@@ -41,6 +41,14 @@ interface ListResponse<T> {
   data: T[]
 }
 
+// $fetch throws a FetchError whose .data is the server's parsed JSON body
+// ({ error: "..." } from writeJSONError) — extracting it means a failed
+// admin save can show the real reason instead of failing silently.
+export function fetchErrorMessage(err: unknown, fallback = 'Something went wrong — please try again.'): string {
+  const data = (err as { data?: { error?: string } })?.data
+  return data?.error || fallback
+}
+
 export function useSiteContent() {
   return {
     fetchAds: (slotKey: string) => $fetch<ListResponse<SiteAd>>(`/api/v1/site/ads?slot=${encodeURIComponent(slotKey)}`).then((r) => r.data || []),

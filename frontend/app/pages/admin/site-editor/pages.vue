@@ -14,6 +14,7 @@ const loading = ref(true)
 const error = ref(false)
 const blocks = ref<ContentBlock[]>([])
 const toast = ref('')
+const saveError = ref('')
 
 async function load() {
   loading.value = true
@@ -35,12 +36,14 @@ const drafts = reactive<Record<number, string>>({})
 watch(blocks, (b) => { for (const block of b) drafts[block.id] = block.body }, { immediate: true })
 
 async function save(block: ContentBlock) {
+  saveError.value = ''
   try {
     await $fetch(`/api/v1/admin/site-content/${block.id}`, { method: 'PATCH', credentials: 'include', body: { body: drafts[block.id] } })
     toast.value = `${block.label} updated.`
     block.body = drafts[block.id]
-  } catch {
+  } catch (err) {
     toast.value = ''
+    saveError.value = `Failed to save "${block.label}": ${fetchErrorMessage(err)}`
   }
 }
 </script>
@@ -56,6 +59,8 @@ async function save(block: ContentBlock) {
       Plain-text content blocks for pages that don't have their own admin section — appears on the live site
       immediately, no redeploy needed.
     </p>
+
+    <p v-if="saveError" class="mb-4 rounded-lg bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700">{{ saveError }}</p>
 
     <LoadingState v-if="loading" />
     <ErrorState v-else-if="error" @retry="load" />

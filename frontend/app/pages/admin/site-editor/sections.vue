@@ -12,6 +12,7 @@ const loading = ref(true)
 const error = ref(false)
 const sections = ref<SectionRow[]>([])
 const toast = ref('')
+const saveError = ref('')
 
 async function load() {
   loading.value = true
@@ -38,14 +39,16 @@ const VARIANTS: Record<string, { value: string; label: string }[]> = {
 }
 
 async function saveSection(s: SectionRow) {
+  saveError.value = ''
   try {
     await $fetch(`/api/v1/admin/site-sections/${s.id}`, {
       method: 'PATCH', credentials: 'include',
       body: { is_visible: s.is_visible, layout_variant: s.layout_variant, background_image_url: s.background_image_url ?? '', sort_order: s.sort_order }
     })
     toast.value = `${s.label} updated.`
-  } catch {
+  } catch (err) {
     toast.value = ''
+    saveError.value = `Failed to update "${s.label}": ${fetchErrorMessage(err)}`
     await load()
   }
 }
@@ -70,8 +73,9 @@ async function uploadHeroImage(s: SectionRow, e: Event) {
     const res = await $fetch<{ url: string }>('/api/v1/admin/media/upload', { method: 'POST', credentials: 'include', body: fd })
     s.background_image_url = res.url
     await saveSection(s)
-  } catch {
+  } catch (err) {
     toast.value = ''
+    saveError.value = `Failed to upload hero image: ${fetchErrorMessage(err)}`
   } finally {
     uploadingHeroImage.value = false
   }
@@ -106,6 +110,8 @@ function move(index: number, dir: -1 | 1) {
       Show or hide homepage sections, reorder them, and switch layout variants where one exists — changes appear on the
       live site immediately, no redeploy needed.
     </p>
+
+    <p v-if="saveError" class="mb-4 rounded-lg bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700">{{ saveError }}</p>
 
     <LoadingState v-if="loading" />
     <ErrorState v-else-if="error" @retry="load" />

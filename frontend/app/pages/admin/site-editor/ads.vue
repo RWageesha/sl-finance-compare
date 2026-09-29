@@ -61,13 +61,16 @@ const adding = ref(false)
 const form = reactive<AdForm>(blankForm())
 const uploading = ref(false)
 const uploadError = ref('')
+const saveError = ref('')
 
 function openAdd() {
   Object.assign(form, blankForm())
+  saveError.value = ''
   adding.value = true
 }
 function openEdit(row: AdRow) {
   editing.value = row
+  saveError.value = ''
   Object.assign(form, {
     slot_id: row.slot_id, ad_type: row.ad_type, title: row.title, image_url: row.image_url,
     target_url: row.target_url, sort_order: row.sort_order, is_active: row.is_active,
@@ -78,6 +81,7 @@ function closeModal() {
   editing.value = null
   adding.value = false
   uploadError.value = ''
+  saveError.value = ''
 }
 
 function bodyFromForm() {
@@ -95,6 +99,11 @@ function bodyFromForm() {
 }
 
 async function save() {
+  saveError.value = ''
+  if (!form.title.trim() || !form.image_url.trim() || !form.target_url.trim()) {
+    saveError.value = 'Title, Image, and Target URL are all required.'
+    return
+  }
   try {
     if (editing.value) {
       await $fetch(`/api/v1/admin/ads/${editing.value.id}`, { method: 'PATCH', credentials: 'include', body: bodyFromForm() })
@@ -105,8 +114,8 @@ async function save() {
     }
     closeModal()
     await load()
-  } catch {
-    toast.value = ''
+  } catch (err) {
+    saveError.value = fetchErrorMessage(err, 'Failed to save the ad — please try again.')
   }
 }
 
@@ -116,8 +125,9 @@ async function confirmDelete() {
   try {
     await $fetch(`/api/v1/admin/ads/${deleting.value.id}`, { method: 'DELETE', credentials: 'include' })
     toast.value = 'Ad deleted.'
-  } catch {
+  } catch (err) {
     toast.value = ''
+    console.error(fetchErrorMessage(err))
   }
   deleting.value = null
   await load()
@@ -258,6 +268,7 @@ function isExpired(row: AdRow) { return row.ends_at !== null && new Date(row.end
             </label>
           </div>
         </div>
+        <p v-if="saveError" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{{ saveError }}</p>
         <div class="mt-4 flex justify-end gap-2">
           <button type="button" class="rounded-lg border border-card-border px-4 py-2 text-sm font-semibold" @click="closeModal">Cancel</button>
           <button type="button" class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90" @click="save">Save</button>

@@ -11,6 +11,7 @@ const loading = ref(true)
 const error = ref(false)
 const overrides = ref<Record<string, OverrideRow>>({})
 const toast = ref('')
+const saveError = ref('')
 
 async function load() {
   loading.value = true
@@ -43,6 +44,7 @@ async function upload(slug: string, field: 'logo_url' | 'logo_small_url', e: Eve
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   uploadingKey.value = `${slug}-${field}`
+  saveError.value = ''
   try {
     const fd = new FormData()
     fd.append('file', file)
@@ -54,20 +56,23 @@ async function upload(slug: string, field: 'logo_url' | 'logo_small_url', e: Eve
     })
     toast.value = 'Logo updated.'
     await load()
-  } catch {
+  } catch (err) {
     toast.value = ''
+    saveError.value = fetchErrorMessage(err, 'Failed to upload logo.')
   } finally {
     uploadingKey.value = ''
   }
 }
 
 async function clearOverride(slug: string) {
+  saveError.value = ''
   try {
     await $fetch(`/api/v1/admin/bank-logos/${slug}`, { method: 'PUT', credentials: 'include', body: { logo_url: '', logo_small_url: '' } })
     toast.value = 'Reverted to default logo.'
     await load()
-  } catch {
+  } catch (err) {
     toast.value = ''
+    saveError.value = fetchErrorMessage(err, 'Failed to revert logo.')
   }
 }
 </script>
@@ -83,6 +88,8 @@ async function clearOverride(slug: string) {
       Replace a bank's logo without a code change — uploads apply immediately on the live site. Banks with no override
       keep using their default logo file.
     </p>
+
+    <p v-if="saveError" class="mb-4 rounded-lg bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700">{{ saveError }}</p>
 
     <LoadingState v-if="loading" />
     <ErrorState v-else-if="error" @retry="load" />

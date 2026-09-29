@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { PRODUCT_TYPES } from '~/config/productTypes'
-import { realRowsFor, type Kind, type TaggedRow } from '~/utils/realProductRows'
+import { realRowsFor, type Kind } from '~/utils/realProductRows'
+import type { TaggedRow } from '~/utils/bankDirectory'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))

@@ -31,8 +31,7 @@ const LINK_COLUMNS = [
 ]
 
 // Only GitHub is a real account for this project — X/LinkedIn have no
-// destination yet, shown for visual completeness but not real links
-// (same honesty convention as the current SiteFooter.vue).
+// destination yet, shown for visual completeness but not real links.
 const SOCIALS = [
   { label: 'X', href: null },
   { label: 'LinkedIn', href: null },

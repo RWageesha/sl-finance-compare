@@ -13,9 +13,11 @@ data collection. All four now match.
 ```
 frontend/                   Nuxt 3 app — source of truth for the frontend;
                              see "Frontend (Nuxt.js)" below
-  app/pages/{index,rates}.vue  Homepage and the rate comparison tool
-  app/components/            ProductCard, CompareCard, RecentRatesTable, RatesTable
-  app/composables/useRatesApi.ts  Fetches the Go API's three rate endpoints
+  app/pages/                 Homepage, Product Directory/Compare, Bank Directory/
+                             Profile, calculators, admin panel, etc.
+  app/components/            Shared UI, grouped by area (layout/, home/, products/,
+                             compare/, admin/, etc.)
+  app/composables/useRatesApi.ts  Fetches the Go API's rate endpoints
   app/utils/format.ts         fmtDate/fmtTenure/formatCategoryLabel
 
 web/                        Generated static output of `frontend/` (nuxt generate) —
@@ -33,12 +35,12 @@ scraper/                    Python data collection — see "Running the scraper"
 
 cmd/api/main.go            REST API (net/http) — GET /api/v1/fixed-deposits,
                             /api/v1/savings-rates, /api/v1/loan-rates; serves web/
+cmd/seed-admin              One-time setup command that creates the initial
+                            super_admin account — see "Setup" below
 internal/db                Postgres access via pgx (Go API side only)
 internal/models            Shared domain types, including the normalized
                             ProductCategory/Product/ProductRate schema
-internal/scrapers/*        Original Go scrapers — superseded by scraper/, kept
-                            for reference; internal/normalize, internal/validate,
-                            and cmd/scraper/main.go likewise unused now
+internal/adminauth          Admin session/password hashing (bcrypt)
 migrations                 SQL migrations, applied in filename order
 ```
 

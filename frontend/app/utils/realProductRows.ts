@@ -14,7 +14,6 @@ import { productDetailHref, fmtLkr } from '~/utils/fdCompare'
 import { fmtTenure, formatCategoryLabel, fmtRelativeDate } from '~/utils/format'
 import type { TaggedRow } from '~/utils/bankDirectory'
 
-export type { TaggedRow }
 export type Kind = TaggedRow['kind']
 
 export function tenureLabelFor(r: ProductRate): string {

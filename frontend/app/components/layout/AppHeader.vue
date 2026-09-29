@@ -1,13 +1,7 @@
 <script setup lang="ts">
-// New Tailwind-based site header matching the approved Figma exactly —
-// dark navy bar, white logo, and every top-level nav item opens a
-// dropdown. Dropdown CONTENT below is a reasonable stub (real pages that
-// already exist elsewhere in the app); replace with final copy once
-// content specs are given.
-//
-// Scoped to the homepage for now (pages/index.vue) — the rest of the site
-// still uses SiteNav.vue's light-theme header. Swapping every page over
-// is a separate pass.
+// Tailwind-based site header matching the approved Figma exactly — dark
+// navy bar, white logo, and every top-level nav item opens a dropdown.
+// Used by every page on the site.
 defineEmits<{ 'focus-search': [] }>()
 
 interface NavChild {

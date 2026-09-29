@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// Self-contained, like SiteFooter.vue's calculator triggers: owns its own
-// modal open/closed state rather than taking it as a prop, since nothing
-// else on the page needs to know about it.
+// Owns its own modal open/closed state rather than taking it as a prop,
+// since nothing else on the page needs to know about it.
 const showFdCalc = ref(false)
 const showLoanCalc = ref(false)
 

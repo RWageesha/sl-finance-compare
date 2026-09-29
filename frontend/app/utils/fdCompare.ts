@@ -1,7 +1,5 @@
 // Shared helpers for the Fixed Deposit comparison flow:
-//   /compare/fixed-deposits          (input)
-//   /compare/fixed-deposits/results  (cards)
-//   /compare/fixed-deposits/table    (side-by-side table)
+//   /compare/fixed-deposits                  (pages/compare/[slug].vue)
 //   /products/fixed-deposits/[slug]          (product detail)
 //   /products/fixed-deposits/[slug]/history  (rate history)
 //

@@ -54,8 +54,8 @@ export default defineNuxtConfig({
     prerender: {
       routes: [
         '/', '/rates', '/banks', '/products',
-        '/compare/fixed-deposits', '/compare/fixed-deposits/results', '/compare/fixed-deposits/table',
-        '/compare/housing-loans', '/compare/personal-loans', '/compare/gold-loans', '/compare/savings',
+        '/compare/fixed-deposits',
+        '/compare/housing-loans', '/compare/personal-loans', '/compare/gold-loans', '/compare/savings-accounts',
         '/calculators/fixed-deposit', '/calculators/loan-emi'
       ],
       // The homepage links to /api/v1/fixed-deposits (the live Go API,

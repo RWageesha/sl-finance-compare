@@ -24,8 +24,8 @@ const LINK_COLUMNS = [
     label: 'System',
     links: [
       { label: 'Data', href: '/data' },
-      { label: 'About Us', href: 'https://github.com/RWageesha/sl-finance-compare#readme', external: true },
-      { label: 'Contact Us', href: 'https://github.com/RWageesha/sl-finance-compare#readme', external: true }
+      { label: 'About Us', href: '/about-us' },
+      { label: 'Contact Us', href: '/contact-us' }
     ]
   }
 ]
@@ -40,6 +40,9 @@ const SOCIALS = [
 </script>
 
 <template>
+  <div class="mx-auto max-w-[1200px] px-4 sm:px-6">
+    <AdSlot slot-key="footer-strip" class="my-4 block h-20 sm:h-24" />
+  </div>
   <footer class="bg-navy">
     <div class="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 sm:py-14">
       <div class="grid grid-cols-1 gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">

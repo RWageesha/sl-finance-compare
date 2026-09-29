@@ -271,6 +271,8 @@ const compareLabel = computed(() => {
           </div>
         </section>
 
+        <AdSlot slot-key="bank-profile" class="mt-5 block h-20 sm:h-24" />
+
         <template v-if="bank.tracked">
           <!-- Tabs -->
           <div class="mt-5 flex flex-wrap gap-2">

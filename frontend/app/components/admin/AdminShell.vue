@@ -17,6 +17,7 @@ const NAV = [
   { label: 'Banks', to: '/admin/banks', icon: 'bank', minRole: 'viewer' },
   { label: 'Products', to: '/admin/products', icon: 'tag', minRole: 'viewer' },
   { label: 'User Reports', to: '/admin/user-reports', icon: 'flag', minRole: 'viewer' },
+  { label: 'Site Editor', to: '/admin/site-editor', icon: 'layout', minRole: 'admin' },
   { label: 'Audit Logs', to: '/admin/audit-logs', icon: 'list', minRole: 'admin' }
 ]
 const visibleNav = computed(() => NAV.filter((n) => roleAtLeast(n.minRole)))

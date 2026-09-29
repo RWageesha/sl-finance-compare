@@ -64,6 +64,7 @@ func run() error {
 	mux.HandleFunc("POST /api/v1/user-reports", handlePublicUserReportCreate(database))
 	mux.HandleFunc("GET /healthz", handleHealthz)
 	registerAdminRoutes(mux, database)
+	registerSiteEditorRoutes(mux, database)
 	mux.Handle("/", spaFileServer{root: "web", fallback: "200.html"})
 
 	srv := &http.Server{

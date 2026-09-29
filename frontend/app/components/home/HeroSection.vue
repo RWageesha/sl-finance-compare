@@ -1,10 +1,33 @@
 <script setup lang="ts">
+// backgroundImage: admin-uploaded replacement for the default skyline
+// (Site Editor -> Homepage Sections). variant 'slider' rotates between
+// that upload and the original default — only a real difference if an
+// admin actually uploaded one; with nothing uploaded there's only one
+// real image, so it renders identically to 'default' rather than faking
+// a second slide.
+const props = withDefaults(defineProps<{ backgroundImage?: string | null; variant?: string }>(), {
+  backgroundImage: null,
+  variant: 'default'
+})
+
+const DEFAULT_BG = '/hero/skyline.jpg'
 const SUGGESTIONS = [
   { label: '12-month FD', href: '/products/fixed-deposits' },
   { label: 'Home Loans', href: '/compare/housing-loans' },
   { label: 'Savings Account', href: '/compare/savings-accounts' },
   { label: 'Gold Loan', href: '/compare/gold-loans' }
 ]
+
+const slides = computed(() => (props.backgroundImage ? [props.backgroundImage, DEFAULT_BG] : [DEFAULT_BG]))
+const current = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  if (props.variant === 'slider' && slides.value.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    timer = setInterval(() => { current.value = (current.value + 1) % slides.value.length }, 7000)
+  }
+})
+onUnmounted(() => { if (timer) clearInterval(timer) })
+const activeBg = computed(() => slides.value[current.value] ?? DEFAULT_BG)
 
 const searchQuery = ref('')
 const searchInput = ref<HTMLInputElement | null>(null)
@@ -25,8 +48,8 @@ defineExpose({
 
 <template>
   <section
-    class="relative bg-navy bg-cover bg-center px-4 py-14 text-center sm:px-6 sm:py-20"
-    style="background-image: linear-gradient(rgba(15,23,42,0.75), rgba(15,23,42,0.85)), url('/hero/skyline.jpg')"
+    class="relative bg-navy bg-cover bg-center px-4 py-14 text-center transition-[background-image] duration-1000 sm:px-6 sm:py-20"
+    :style="{ backgroundImage: `linear-gradient(rgba(15,23,42,0.75), rgba(15,23,42,0.85)), url('${activeBg}')` }"
   >
     <div class="mx-auto max-w-[820px]">
       <span class="inline-block rounded-pill bg-primary/20 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary sm:px-4 sm:text-xs">

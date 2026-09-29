@@ -194,6 +194,7 @@ watch(
       No products match your filters.
     </p>
 
+    <AdSlot v-if="rows.length > 0" slot-key="product-list-native" class="mt-4 block h-16 sm:h-20" />
     <Pagination v-if="pageCount > 1" v-model="currentPage" :page-count="pageCount" />
   </div>
 </template>

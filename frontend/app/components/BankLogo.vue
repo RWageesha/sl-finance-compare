@@ -12,9 +12,23 @@ const props = defineProps<{
   small?: boolean
 }>()
 
+// Admin-uploaded overrides (Site Editor -> Bank Logos) win over the
+// static default file when set — fetched once and shared across every
+// BankLogo on the page via useBankLogoOverrides' module-level cache.
+const { overrides, ensureLoaded } = useBankLogoOverrides()
+onMounted(ensureLoaded)
+
 const src = computed(() => {
   if (!props.bank) return null
-  if (props.small && props.bank.logoSmallExt) return `/banks/${props.bank.slug}-small.${props.bank.logoSmallExt}`
+  const override = overrides.value[props.bank.slug]
+  if (props.small) {
+    if (override?.logo_small_url) return override.logo_small_url
+    if (override?.logo_url) return override.logo_url
+    if (props.bank.logoSmallExt) return `/banks/${props.bank.slug}-small.${props.bank.logoSmallExt}`
+    if (props.bank.logoExt) return `/banks/${props.bank.slug}.${props.bank.logoExt}`
+    return null
+  }
+  if (override?.logo_url) return override.logo_url
   if (props.bank.logoExt) return `/banks/${props.bank.slug}.${props.bank.logoExt}`
   return null
 })

@@ -1,6 +1,7 @@
 <template>
   <div>
     <NuxtPage />
+    <SkyscraperRails />
   </div>
 </template>
 

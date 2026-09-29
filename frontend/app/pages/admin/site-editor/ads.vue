@@ -139,6 +139,13 @@ function blankWizard(): WizardState {
 const W = reactive(blankWizard())
 const errors = ref<string[]>([])
 const showWizard = ref(false)
+const saving = ref(false)
+// Nothing stopped clicking Next while a file was still mid-upload to
+// Supabase Storage — the item's src is still empty at that instant, so
+// validation should already block it, but disabling Next/Save outright
+// removes the timing window entirely rather than relying on a race
+// between the click handler and the upload's own async completion.
+const anyUploading = computed(() => W.items.some((it) => it.uploading))
 
 const isUrl = (s: string) => /^https?:\/\/[^\s.]+\.[^\s]+/i.test(s || '')
 
@@ -336,10 +343,12 @@ function buildPayload() {
 }
 
 async function save() {
+  if (saving.value || anyUploading.value) return
   for (let i = 0; i < 4; i++) {
     const e = validateStep(i)
     if (e.length) { W.step = i; errors.value = e; return }
   }
+  saving.value = true
   try {
     if (W.editingId) {
       await $fetch(`/api/v1/admin/ads/${W.editingId}`, { method: 'PATCH', credentials: 'include', body: buildPayload() })
@@ -352,6 +361,8 @@ async function save() {
     await load()
   } catch (err) {
     errors.value = [fetchErrorMessage(err, 'Failed to save the ad.')]
+  } finally {
+    saving.value = false
   }
 }
 
@@ -681,8 +692,20 @@ async function confirmDelete() {
 
         <div class="flex justify-between gap-2 border-t border-card-border bg-page px-6 py-3.5">
           <button type="button" class="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-semibold text-navy" @click="back">{{ W.step === 0 ? 'Cancel' : 'Back' }}</button>
-          <button v-if="W.step < 4" type="button" class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90" @click="go(W.step + 1)">Next</button>
-          <button v-else type="button" class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90" @click="save">{{ W.editingId ? 'Save changes' : 'Save ad' }}</button>
+          <button
+            v-if="W.step < 4" type="button" :disabled="anyUploading"
+            class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            @click="go(W.step + 1)"
+          >
+            {{ anyUploading ? 'Uploading…' : 'Next' }}
+          </button>
+          <button
+            v-else type="button" :disabled="anyUploading || saving"
+            class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            @click="save"
+          >
+            {{ saving ? 'Saving…' : anyUploading ? 'Uploading…' : (W.editingId ? 'Save changes' : 'Save ad') }}
+          </button>
         </div>
       </div>
     </div>

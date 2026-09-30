@@ -50,6 +50,30 @@ const STYLES: Record<StyleKey, StyleDef> = {
 }
 const STEP_NAMES = ['Format', 'Creative', 'Placement', 'Schedule & Rotation', 'Review']
 
+// Real IAB standard sizes, one list per layout — every physical ad spot
+// on the site (a rail, or a horizontal banner strip) can host any size
+// from the matching list; the admin picks which one this specific ad
+// is, AdSlot.vue renders it at that exact width/height (see
+// components/AdSlot.vue), and the spot itself adapts rather than being
+// locked to one fixed size. This is what makes "every size on every
+// page" possible without needing a separate physical slot per size.
+interface SizeOption { label: string; w: number; h: number }
+const SIZE_OPTIONS: Record<'h' | 'v', SizeOption[]> = {
+  h: [
+    { label: 'Leaderboard (728×90)', w: 728, h: 90 },
+    { label: 'Large Leaderboard (970×90)', w: 970, h: 90 },
+    { label: 'Billboard (970×250)', w: 970, h: 250 },
+    { label: 'Mobile Leaderboard (320×50)', w: 320, h: 50 },
+    { label: 'Large Mobile Banner (320×100)', w: 320, h: 100 }
+  ],
+  v: [
+    { label: 'Skyscraper (120×600)', w: 120, h: 600 },
+    { label: 'Wide Skyscraper (160×600)', w: 160, h: 600 },
+    { label: 'Half Page (300×600)', w: 300, h: 600 },
+    { label: 'Portrait (300×1050)', w: 300, h: 1050 }
+  ]
+}
+
 // ===== List state =====
 const loading = ref(true)
 const error = ref(false)
@@ -130,6 +154,7 @@ interface WizardState {
   maxReached: number
   layout: 'h' | 'v'
   style: StyleKey | null
+  sizeIndex: number
   items: CreativeItem[]
   sliderInterval: number
   sharedGap: number
@@ -148,7 +173,7 @@ interface WizardState {
 }
 function blankWizard(): WizardState {
   return {
-    editingId: null, step: 0, maxReached: 0, layout: 'h', style: null, items: [],
+    editingId: null, step: 0, maxReached: 0, layout: 'h', style: null, sizeIndex: 0, items: [],
     sliderInterval: 5, sharedGap: 12, overlay: { delay: 2, closeAfter: 3, freq: 'session' },
     pages: [], slots: [], title: '', adType: 'house', advertiser: '', start: nowLocal(), end: '',
     devices: 'all', sortOrder: 0, weight: 5, active: true
@@ -174,10 +199,15 @@ function openAdd() {
 }
 function openEdit(row: AdRow) {
   if (!STYLES[row.style as StyleKey]) return
+  const layout = row.layout === 'vertical' ? 'v' : 'h'
+  const savedW = Number(row.settings?.width)
+  const savedH = Number(row.settings?.height)
+  const matchedSizeIndex = SIZE_OPTIONS[layout].findIndex((s) => s.w === savedW && s.h === savedH)
   Object.assign(W, {
     editingId: row.id, step: 0, maxReached: 4,
-    layout: row.layout === 'vertical' ? 'v' : 'h',
+    layout,
     style: row.style as StyleKey,
+    sizeIndex: matchedSizeIndex >= 0 ? matchedSizeIndex : 0,
     items: row.creatives
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -254,6 +284,7 @@ function back() {
 function selectLayout(v: 'h' | 'v') {
   W.layout = v
   W.slots = []
+  W.sizeIndex = 0
 }
 function selectStyle(v: StyleKey) {
   if (W.style !== v) {
@@ -324,11 +355,16 @@ function toggleAllSlots(pageKey: string) {
 
 function buildSettings(): Record<string, unknown> {
   if (!W.style) return {}
-  if (W.style === 'slider') return { interval_seconds: W.sliderInterval }
-  if (W.style === 'shared') return { gap_px: W.sharedGap }
   if (W.style === 'overlay') return { show_after_seconds: W.overlay.delay, close_after_seconds: W.overlay.closeAfter, frequency: W.overlay.freq }
-  if (W.style === 'video') return { autoplay: true, muted: true, loop: true }
-  return {}
+  // Every non-overlay style carries its real display size — this is what
+  // lets one physical ad spot host any standard size, chosen per ad
+  // rather than fixed per slot (see SIZE_OPTIONS above).
+  const size = SIZE_OPTIONS[W.layout][W.sizeIndex] ?? SIZE_OPTIONS[W.layout][0]
+  const base: Record<string, unknown> = { width: size.w, height: size.h }
+  if (W.style === 'slider') return { ...base, interval_seconds: W.sliderInterval }
+  if (W.style === 'shared') return { ...base, gap_px: W.sharedGap }
+  if (W.style === 'video') return { ...base, autoplay: true, muted: true, loop: true }
+  return base
 }
 function buildSlotIds(): number[] {
   if (W.style === 'overlay') {
@@ -528,6 +564,23 @@ async function confirmDelete() {
                 </button>
               </div>
             </div>
+            <div v-if="W.style && W.style !== 'overlay'">
+              <h4 class="text-sm font-bold text-navy">Size</h4>
+              <p class="mb-2 text-xs text-muted">
+                A real standard ad size — this decides which ad spots it fits and what to upload. The same physical spot
+                can host any size in this list, so pick whichever matches your creative.
+              </p>
+              <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                <button
+                  v-for="(opt, i) in SIZE_OPTIONS[W.layout]" :key="opt.label" type="button"
+                  class="rounded-lg border-2 p-3 text-left"
+                  :class="W.sizeIndex === i ? 'border-primary bg-badge-bg' : 'border-card-border'"
+                  @click="W.sizeIndex = i"
+                >
+                  <b class="block text-sm text-navy">{{ opt.label }}</b>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Step 1: Creative -->
@@ -703,6 +756,7 @@ async function confirmDelete() {
                 <tr class="border-b border-card-border"><td class="w-1/3 py-2 text-muted">Title</td><td class="py-2 text-navy">{{ W.title }}</td></tr>
                 <tr class="border-b border-card-border"><td class="py-2 text-muted">Ad type</td><td class="py-2 text-navy">{{ W.adType }}{{ W.advertiser ? ` — ${W.advertiser}` : '' }}</td></tr>
                 <tr class="border-b border-card-border"><td class="py-2 text-muted">Format</td><td class="py-2 text-navy">{{ W.layout === 'h' ? 'Horizontal' : 'Vertical' }}, {{ W.style ? STYLES[W.style].name : '' }}</td></tr>
+                <tr v-if="W.style !== 'overlay'" class="border-b border-card-border"><td class="py-2 text-muted">Size</td><td class="py-2 text-navy">{{ SIZE_OPTIONS[W.layout][W.sizeIndex]?.label }}</td></tr>
                 <tr class="border-b border-card-border"><td class="py-2 text-muted">Files</td><td class="py-2 text-navy">{{ W.items.length }}</td></tr>
                 <tr class="border-b border-card-border">
                   <td class="py-2 text-muted">Placement</td>

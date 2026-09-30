@@ -1,8 +1,14 @@
 <script setup lang="ts">
-// A generic ad placement — fills whatever box its call site sizes it to
-// (skyscraper rail, homepage banner, footer strip, etc. all use the same
-// component with different wrapper CSS). Renders nothing when the slot
-// has no qualifying ad, so an empty slot never leaves a visible gap.
+// A generic ad placement. Renders nothing when the slot has no
+// qualifying ad, so an empty slot never leaves a visible gap.
+//
+// Size is per-ad, not per-slot: every ad carries its own real IAB
+// standard width/height (settings.width/height, chosen in the wizard's
+// Format step — see pages/admin/site-editor/ads.vue's SIZE_OPTIONS), so
+// the same physical spot (e.g. the skyscraper rail, or a page's banner
+// strip) can host a 728x90 Leaderboard, a 970x250 Billboard, or anything
+// else of matching orientation — the call site only controls POSITION
+// (absolute/top/left, or mx-auto/block), never the size.
 //
 // One ad is chosen per page load (weighted-random among every ad
 // currently placed on this slot, filtered to ads allowed on this
@@ -17,7 +23,18 @@ import type { SiteAd } from '~/composables/useSiteContent'
 // plus the site-wide fallback) — candidates from every given slot are
 // pooled together before the one weighted pick below, so a page-specific
 // ad and a site-wide one can compete for the same physical rail.
-const props = defineProps<{ slotKey: string | string[] }>()
+//
+// rail: true for fixed-position side rails, where a wide ad (e.g. a
+// 300px Half Page) needs a wider viewport than a narrow one (120px
+// Skyscraper) to clear the page's own content column without
+// overlapping it — checked per the ad actually chosen, not a fixed
+// breakpoint, since which ad wins the weighted pick can vary. Non-rail
+// (horizontal banner) placements instead just shrink responsively via
+// aspect-ratio, since there's no side content to overlap.
+const props = withDefaults(defineProps<{ slotKey: string | string[]; rail?: boolean; railOffset?: number }>(), {
+  rail: false,
+  railOffset: 12
+})
 
 const { fetchAds } = useSiteContent()
 const ad = ref<SiteAd | null>(null)
@@ -41,13 +58,39 @@ function weightedPick(ads: SiteAd[]): SiteAd {
   return ads[ads.length - 1]
 }
 
+// Fallback for ads saved before per-ad sizing existed (settings has no
+// width/height) — keeps them rendering at a sensible default instead of
+// collapsing to 0.
+const DEFAULT_SIZE = { h: { w: 728, h: 90 }, v: { w: 120, h: 600 } }
+const resolvedSize = computed(() => {
+  const layoutKey = ad.value?.layout === 'vertical' ? 'v' : 'h'
+  const w = Number(ad.value?.settings?.width) || DEFAULT_SIZE[layoutKey].w
+  const h = Number(ad.value?.settings?.height) || DEFAULT_SIZE[layoutKey].h
+  return { w, h }
+})
+
+const fitsViewport = ref(true)
+function checkFit() {
+  if (!props.rail) return
+  const { w } = resolvedSize.value
+  const needed = 1200 + 2 * (w + props.railOffset)
+  fitsViewport.value = window.innerWidth >= needed
+}
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
+function onResize() {
+  if (resizeTimer) clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(checkFit, 150)
+}
+
 onMounted(async () => {
   const keys = Array.isArray(props.slotKey) ? props.slotKey : [props.slotKey]
   const results = await Promise.all(keys.map((k) => fetchAds(k).catch(() => [])))
   const all = [...new Map(results.flat().map((a) => [a.id, a])).values()]
   const candidates = all.filter((a) => deviceMatches(a.devices) && a.creatives.length > 0)
+  window.addEventListener('resize', onResize)
   if (candidates.length === 0) return
   ad.value = weightedPick(candidates)
+  checkFit()
   if (ad.value.style === 'slider' && ad.value.creatives.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const intervalSeconds = Number(ad.value.settings?.interval_seconds) || 5
     timer = setInterval(() => {
@@ -57,14 +100,23 @@ onMounted(async () => {
 })
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  window.removeEventListener('resize', onResize)
+  if (resizeTimer) clearTimeout(resizeTimer)
 })
 
 const gapPx = computed(() => Number(ad.value?.settings?.gap_px) || 12)
 const activeCreative = computed(() => ad.value?.creatives[current.value] ?? null)
+const shouldShow = computed(() => !!ad.value && (!props.rail || fitsViewport.value))
+const sizeStyle = computed(() => {
+  const { w, h } = resolvedSize.value
+  return props.rail
+    ? { width: `${w}px`, height: `${h}px` }
+    : { width: '100%', maxWidth: `${w}px`, aspectRatio: `${w} / ${h}` }
+})
 </script>
 
 <template>
-  <div v-if="ad" class="ad-slot">
+  <div v-if="shouldShow" class="ad-slot" :style="sizeStyle">
     <div class="ad-frame">
       <span class="ad-tag">Advertisement</span>
 

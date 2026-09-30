@@ -203,15 +203,23 @@ function openEdit(row: AdRow) {
   const savedW = Number(row.settings?.width)
   const savedH = Number(row.settings?.height)
   const matchedSizeIndex = SIZE_OPTIONS[layout].findIndex((s) => s.w === savedW && s.h === savedH)
+  const loadedItems = row.creatives
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((c) => ({ src: c.media_url, fileName: '', alt: c.alt_text || '', url: c.target_url, poster: c.poster_url || '', uploading: false }))
+  // A style with min===max (Image/GIF/Video) only ever shows an "Add
+  // tile" button when max > 1, so an ad that was ever saved with zero
+  // creatives (the earlier upload-race bug) would open here with no
+  // item cards AND no way to add one. Pad up to the style's minimum so
+  // Edit always has at least one fillable slot.
+  const min = STYLES[row.style as StyleKey].min
+  while (loadedItems.length < min) loadedItems.push(newItem())
   Object.assign(W, {
     editingId: row.id, step: 0, maxReached: 4,
     layout,
     style: row.style as StyleKey,
     sizeIndex: matchedSizeIndex >= 0 ? matchedSizeIndex : 0,
-    items: row.creatives
-      .slice()
-      .sort((a, b) => a.position - b.position)
-      .map((c) => ({ src: c.media_url, fileName: '', alt: c.alt_text || '', url: c.target_url, poster: c.poster_url || '', uploading: false })),
+    items: loadedItems,
     sliderInterval: Number(row.settings?.interval_seconds) || 5,
     sharedGap: Number(row.settings?.gap_px) || 12,
     overlay: {

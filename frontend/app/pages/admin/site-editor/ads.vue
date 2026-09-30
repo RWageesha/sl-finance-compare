@@ -27,6 +27,16 @@ const PAGE_LABELS: Record<string, string> = {
   banks: 'Bank Profile',
   products: 'Product & Compare Lists'
 }
+// One real, live URL per page group to check an ad against — banks and
+// products groups cover many real pages (every bank profile, every
+// product/compare list), so this links one representative example, not
+// the only place the ad appears.
+const PAGE_URLS: Record<string, string> = {
+  sitewide: '/',
+  home: '/',
+  banks: '/banks/hnb',
+  products: '/products/fixed-deposits'
+}
 
 type StyleKey = 'image' | 'gif' | 'video' | 'slider' | 'shared' | 'overlay'
 interface StyleDef { name: string; desc: string; min: number; max: number; accept: string }
@@ -87,6 +97,14 @@ function placementSummary(row: AdRow): string {
     return `${pages.join(', ')} (overlay)`
   }
   return row.placements.map((p) => slotById.value[p.slot_id]?.label ?? p.slot_key).join(', ')
+}
+
+// One link per distinct page group the ad is placed on, so an admin can
+// click straight through and check the live result instead of guessing
+// a URL from the slot label.
+function placementLinks(row: AdRow): { key: string; label: string; url: string }[] {
+  const pageKeys = [...new Set(row.placements.map((p) => p.page_key))]
+  return pageKeys.map((key) => ({ key, label: PAGE_LABELS[key] ?? key, url: PAGE_URLS[key] ?? '/' }))
 }
 
 // ===== Wizard state =====
@@ -415,7 +433,18 @@ async function confirmDelete() {
               <span class="rounded-pill bg-page px-2 py-0.5 text-[11px] font-bold uppercase text-navy">{{ a.style }}</span>
               <span class="ml-1 text-[11px] text-muted">{{ a.ad_type }}{{ a.advertiser ? ` — ${a.advertiser}` : '' }}</span>
             </td>
-            <td class="px-4 py-2.5 text-xs text-muted">{{ placementSummary(a) }}</td>
+            <td class="px-4 py-2.5 text-xs text-muted">
+              <p>{{ placementSummary(a) }}</p>
+              <p v-if="placementLinks(a).length" class="mt-0.5 flex flex-wrap gap-x-2">
+                <NuxtLink
+                  v-for="link in placementLinks(a)" :key="link.key"
+                  :to="link.url" target="_blank"
+                  class="font-semibold text-primary hover:underline"
+                >
+                  View on {{ link.label }} &rarr;
+                </NuxtLink>
+              </p>
+            </td>
             <td class="px-4 py-2.5 text-xs text-muted">sort {{ a.sort_order }}, weight {{ a.weight }}</td>
             <td class="px-4 py-2.5">
               <span class="rounded-pill px-2 py-0.5 text-[11px] font-bold" :class="a.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-page text-muted'">

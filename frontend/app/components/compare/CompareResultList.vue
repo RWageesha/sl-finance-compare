@@ -194,7 +194,8 @@ watch(
       No products match your filters.
     </p>
 
-    <AdSlot v-if="rows.length > 0" slot-key="product-list-native" class="mt-4 block h-16 sm:h-20" />
+    <!-- Leaderboard (728x90) — standard in-content banner size. -->
+    <AdSlot v-if="rows.length > 0" slot-key="product-list-native" class="mx-auto mt-4 block h-16 w-full max-w-[728px] sm:h-[90px]" />
     <Pagination v-if="pageCount > 1" v-model="currentPage" :page-count="pageCount" />
   </div>
 </template>

@@ -41,7 +41,8 @@ const SOCIALS = [
 
 <template>
   <div class="mx-auto max-w-[1200px] px-4 sm:px-6">
-    <AdSlot slot-key="footer-strip" class="my-4 block h-20 sm:h-24" />
+    <!-- Large Leaderboard (970x90) — matches the standard "above footer" size. -->
+    <AdSlot slot-key="footer-strip" class="mx-auto my-4 block h-20 w-full max-w-[970px] sm:h-[90px]" />
   </div>
   <footer class="bg-navy">
     <div class="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 sm:py-14">

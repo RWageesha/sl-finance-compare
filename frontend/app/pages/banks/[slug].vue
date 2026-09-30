@@ -271,7 +271,8 @@ const compareLabel = computed(() => {
           </div>
         </section>
 
-        <AdSlot slot-key="bank-profile" class="mt-5 block h-20 sm:h-24" />
+        <!-- Leaderboard (728x90) — standard in-page banner size. -->
+        <AdSlot slot-key="bank-profile" class="mx-auto mt-5 block h-20 w-full max-w-[728px] sm:h-[90px]" />
 
         <template v-if="bank.tracked">
           <!-- Tabs -->

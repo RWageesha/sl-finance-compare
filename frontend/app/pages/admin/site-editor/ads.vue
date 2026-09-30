@@ -537,10 +537,11 @@ async function confirmDelete() {
               <span v-if="STYLES[W.style].max > 1">Each {{ W.style === 'slider' ? 'slide' : 'tile' }} has its own link.</span>
             </p>
             <div v-if="W.style === 'shared'" class="rounded-lg bg-badge-bg px-3 py-2 text-xs text-navy">
-              Use square files (1:1, e.g. 300×300). Tiles sit {{ W.layout === 'h' ? 'in a row' : 'in a column' }} inside one ad space.
+              Use square files (e.g. 250×250 Square or 300×250 Medium Rectangle). Tiles sit {{ W.layout === 'h' ? 'in a row' : 'in a column' }}
+              inside one ad space — 3 tiles in a row needs a slot roughly 780px+ wide (e.g. a 970-wide Billboard/Large Leaderboard spot).
             </div>
             <div v-if="W.style === 'overlay'" class="rounded-lg bg-badge-bg px-3 py-2 text-xs text-navy">
-              Recommended: {{ W.layout === 'h' ? '800×450 landscape' : '450×800 portrait' }}. On phones it scales to fit the screen.
+              Recommended: {{ W.layout === 'h' ? '800×450 or 800×600 landscape' : '320×480 portrait' }}. Scales to fit the screen without cropping.
             </div>
 
             <div v-for="(it, i) in W.items" :key="i" class="rounded-lg border border-card-border bg-page p-3.5">

@@ -148,7 +148,12 @@ const activeCreative = computed(() => ad.value?.creatives[current.value] ?? null
 .ad-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* contain, not cover — call sites now size each slot to a real IAB
+     standard (e.g. 728x90 Leaderboard, 970x250 Billboard), so a
+     correctly-sized upload should just fill the box exactly; contain
+     keeps a slightly-off upload fully visible (letterboxed) instead of
+     cropping it, which cover would do silently. */
+  object-fit: contain;
   display: block;
 }
 .ad-tag {

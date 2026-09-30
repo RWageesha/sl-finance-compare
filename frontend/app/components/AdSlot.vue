@@ -13,7 +13,11 @@
 // `activeCreative` below.
 import type { SiteAd } from '~/composables/useSiteContent'
 
-const props = defineProps<{ slotKey: string }>()
+// slotKey accepts several keys (e.g. a page-specific skyscraper slot
+// plus the site-wide fallback) — candidates from every given slot are
+// pooled together before the one weighted pick below, so a page-specific
+// ad and a site-wide one can compete for the same physical rail.
+const props = defineProps<{ slotKey: string | string[] }>()
 
 const { fetchAds } = useSiteContent()
 const ad = ref<SiteAd | null>(null)
@@ -38,7 +42,9 @@ function weightedPick(ads: SiteAd[]): SiteAd {
 }
 
 onMounted(async () => {
-  const all = await fetchAds(props.slotKey).catch(() => [])
+  const keys = Array.isArray(props.slotKey) ? props.slotKey : [props.slotKey]
+  const results = await Promise.all(keys.map((k) => fetchAds(k).catch(() => [])))
+  const all = [...new Map(results.flat().map((a) => [a.id, a])).values()]
   const candidates = all.filter((a) => deviceMatches(a.devices) && a.creatives.length > 0)
   if (candidates.length === 0) return
   ad.value = weightedPick(candidates)

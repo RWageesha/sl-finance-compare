@@ -13,13 +13,6 @@ import type { SiteAd } from '~/composables/useSiteContent'
 const { fetchAds } = useSiteContent()
 const route = useRoute()
 
-function resolvePageKey(path: string): string | null {
-  if (path === '/') return 'home'
-  if (path.startsWith('/banks')) return 'banks'
-  if (path.startsWith('/products') || path.startsWith('/compare')) return 'products'
-  return null
-}
-
 function overlayStorageKey(adId: number) {
   return `adOverlaySeen:${adId}`
 }

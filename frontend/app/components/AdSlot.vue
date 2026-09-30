@@ -65,62 +65,72 @@ const activeCreative = computed(() => ad.value?.creatives[current.value] ?? null
 
 <template>
   <div v-if="ad" class="ad-slot">
-    <span class="ad-tag">Advertisement</span>
+    <div class="ad-frame">
+      <span class="ad-tag">Advertisement</span>
 
-    <a
-      v-if="(ad.style === 'image' || ad.style === 'gif' || ad.style === 'slider') && activeCreative"
-      :href="activeCreative.target_url"
-      target="_blank"
-      rel="noopener sponsored"
-      class="ad-fill"
-      :aria-label="activeCreative.alt_text || ad.title"
-    >
-      <img :src="activeCreative.media_url" :alt="activeCreative.alt_text || ad.title" class="ad-img">
-    </a>
-
-    <a
-      v-else-if="ad.style === 'video' && ad.creatives[0]"
-      :href="ad.creatives[0].target_url"
-      target="_blank"
-      rel="noopener sponsored"
-      class="ad-fill"
-      :aria-label="ad.creatives[0].alt_text || ad.title"
-    >
-      <video
-        :src="ad.creatives[0].media_url"
-        :poster="ad.creatives[0].poster_url || undefined"
-        class="ad-img"
-        autoplay
-        muted
-        loop
-        playsinline
-      />
-    </a>
-
-    <div v-else-if="ad.style === 'shared'" class="ad-fill flex" :class="ad.layout === 'vertical' ? 'flex-col' : 'flex-row'" :style="{ gap: `${gapPx}px` }">
       <a
-        v-for="c in ad.creatives"
-        :key="c.id"
-        :href="c.target_url"
+        v-if="(ad.style === 'image' || ad.style === 'gif' || ad.style === 'slider') && activeCreative"
+        :href="activeCreative.target_url"
         target="_blank"
         rel="noopener sponsored"
-        class="ad-tile"
-        :aria-label="c.alt_text || ad.title"
+        class="ad-fill"
+        :aria-label="activeCreative.alt_text || ad.title"
       >
-        <img :src="c.media_url" :alt="c.alt_text || ad.title" class="ad-img">
+        <img :src="activeCreative.media_url" :alt="activeCreative.alt_text || ad.title" class="ad-img">
       </a>
+
+      <a
+        v-else-if="ad.style === 'video' && ad.creatives[0]"
+        :href="ad.creatives[0].target_url"
+        target="_blank"
+        rel="noopener sponsored"
+        class="ad-fill"
+        :aria-label="ad.creatives[0].alt_text || ad.title"
+      >
+        <video
+          :src="ad.creatives[0].media_url"
+          :poster="ad.creatives[0].poster_url || undefined"
+          class="ad-img"
+          autoplay
+          muted
+          loop
+          playsinline
+        />
+      </a>
+
+      <div v-else-if="ad.style === 'shared'" class="ad-fill flex" :class="ad.layout === 'vertical' ? 'flex-col' : 'flex-row'" :style="{ gap: `${gapPx}px` }">
+        <a
+          v-for="c in ad.creatives"
+          :key="c.id"
+          :href="c.target_url"
+          target="_blank"
+          rel="noopener sponsored"
+          class="ad-tile"
+          :aria-label="c.alt_text || ad.title"
+        >
+          <img :src="c.media_url" :alt="c.alt_text || ad.title" class="ad-img">
+        </a>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* No width/height on .ad-slot on purpose — every call site passes its
-   own sizing classes (h-24, w-40, etc.) straight onto <AdSlot>, and a
-   fixed width/height in scoped CSS would win the cascade over those
-   (Vue's data-v-* attribute selector makes scoped rules more specific
-   than a plain Tailwind utility class) and silently override them. */
-.ad-slot {
+/* .ad-slot (the root) declares NO layout CSS at all on purpose — every
+   call site passes its own sizing/positioning classes (h-24, w-40,
+   absolute, top-36, etc.) straight onto <AdSlot>, and Vue's scoped-style
+   attribute selector (.ad-slot[data-v-*]) is more specific than a plain
+   Tailwind utility class, so ANY property declared here — width, height,
+   position, whatever — would silently win the cascade over what the
+   caller passed in (this bit us twice: once for width/height, once for
+   position). The one thing every instance genuinely needs regardless of
+   caller — a relative box to anchor the "Advertisement" tag and clip the
+   creative to rounded corners — lives on .ad-frame instead, a child
+   Vue fully owns with no possible class collision from outside. */
+.ad-frame {
   position: relative;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border-radius: 12px;
   background: var(--page, #f8fafc);

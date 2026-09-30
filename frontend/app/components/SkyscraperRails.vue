@@ -1,15 +1,21 @@
 <script setup lang="ts">
-// Fixed-position vertical ad rails in the side gutters — every content
-// page centers its content in a <= 1200px column (see pages/*/index.vue,
-// AppHeader/AppFooter). Each rail needs a 24px offset + 160px width =
-// 184px of real gutter per side, which only exists once the viewport is
-// at least 1200 + 2*184 = 1568px — 1600px is used as a clean, safe round
-// number above that. (Tailwind's built-in 3xl, 1760px, was tried first
-// but turned out wider than most real desktop browser windows — even a
-// maximized 1920x1080 display often reports less than that once you
-// subtract the OS taskbar/window chrome, or with Windows display scaling
-// above 100% — which made the rails practically invisible in normal
-// testing, defeating the point.)
+// Vertical ad rails in the side gutters — every content page centers its
+// content in a <= 1200px column (see pages/*/index.vue, AppHeader/
+// AppFooter). Deliberately `absolute`, not `fixed`: these sit right
+// after the hero/header (top-36) and scroll away with the rest of the
+// page past that point, like a normal part of the page layout, instead
+// of staying pinned to the viewport as the visitor scrolls further down
+// (which looked like a banner stuck on top of later sections).
+//
+// Each rail needs an offset + width of real gutter per side. Using a
+// 120px rail (the IAB "Skyscraper" standard size, narrower than the
+// 160px "Wide Skyscraper" tried first) at a 12px offset needs 132px of
+// gutter, which exists once the viewport is at least 1200 + 2*132 =
+// 1464px — 1500px is used as a clean, safe round number above that.
+// (1600px/160px-wide was tried first but excluded common scaled desktop
+// widths — e.g. a 1920px display at Windows' own 125% scaling reports a
+// 1536px CSS viewport, narrower than that.)
+//
 // Mounted once here so every page gets it for free instead of repeating
 // the wrapper per page. Each rail resolves the current page's own
 // skyscraper slot (migrations/009_page_skyscrapers.sql) plus the
@@ -22,8 +28,8 @@ const rightKeys = computed(() => [...(pageKey.value ? [`${pageKey.value}-skyscra
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-y-0 left-0 right-0 z-30 hidden min-[1600px]:block">
-    <AdSlot :slot-key="leftKeys" class="pointer-events-auto absolute left-6 top-36 block h-[600px] w-40" />
-    <AdSlot :slot-key="rightKeys" class="pointer-events-auto absolute right-6 top-36 block h-[600px] w-40" />
+  <div class="pointer-events-none z-30 hidden min-[1500px]:block">
+    <AdSlot :slot-key="leftKeys" class="pointer-events-auto absolute left-3 top-36 block h-[600px] w-[120px]" />
+    <AdSlot :slot-key="rightKeys" class="pointer-events-auto absolute right-3 top-36 block h-[600px] w-[120px]" />
   </div>
 </template>

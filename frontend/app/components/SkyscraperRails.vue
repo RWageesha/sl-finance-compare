@@ -35,13 +35,17 @@ const rightKeys = computed(() => [...(pageKey.value ? [`${pageKey.value}-skyscra
 
 // Fallback for pages with no #hero-section (everything except home) —
 // just past the header bar, matching every other page's own breadcrumb
-// spacing.
+// spacing. GAP adds breathing room below the hero/header so the ad reads
+// as its own clearly separated block instead of butting straight up
+// against the hero edge.
 const FALLBACK_TOP = 96
-const topPx = ref(FALLBACK_TOP)
+const GAP = 32
+const topPx = ref(FALLBACK_TOP + GAP)
 
 function measureTop() {
   const hero = document.getElementById('hero-section')
-  topPx.value = hero ? Math.round(hero.getBoundingClientRect().bottom + window.scrollY) : FALLBACK_TOP
+  const base = hero ? Math.round(hero.getBoundingClientRect().bottom + window.scrollY) : FALLBACK_TOP
+  topPx.value = base + GAP
 }
 
 let resizeTimer: ReturnType<typeof setTimeout> | null = null

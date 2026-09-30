@@ -48,6 +48,7 @@ defineExpose({
 
 <template>
   <section
+    id="hero-section"
     class="relative bg-navy bg-cover bg-center px-4 py-14 text-center transition-[background-image] duration-1000 sm:px-6 sm:py-20"
     :style="{ backgroundImage: `linear-gradient(rgba(15,23,42,0.75), rgba(15,23,42,0.85)), url('${activeBg}')` }"
   >

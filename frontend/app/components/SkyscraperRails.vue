@@ -14,12 +14,12 @@
 // home or leaving a gap on every other page. Re-measured on resize since
 // the hero reflows at each breakpoint.
 //
-// How wide a rail can be before it needs a wider viewport varies by ad
-// now — an admin can choose anything from a 120px Skyscraper up to a
-// 300px Half Page/Portrait per ad (see the wizard's Format step) — so
-// visibility is checked inside AdSlot itself (the `rail` prop) against
-// whichever ad actually won the weighted pick, not a single fixed
-// breakpoint on this wrapper.
+// How wide a rail can be varies by ad now — an admin can choose
+// anything from a 120px Skyscraper up to a 300px Half Page/Portrait per
+// ad (see the wizard's Format step). AdSlot itself (the `rail` prop)
+// scales whichever ad actually won the weighted pick down to fit
+// whatever gutter space is actually available, rather than this wrapper
+// enforcing one fixed breakpoint for every size.
 //
 // Mounted once here so every page gets it for free instead of repeating
 // the wrapper per page. Each rail resolves the current page's own
@@ -67,7 +67,7 @@ watch(() => route.path, () => nextTick(measureTop))
 
 <template>
   <div class="pointer-events-none z-30">
-    <AdSlot rail :slot-key="leftKeys" class="pointer-events-auto absolute left-3 block" :style="{ top: `${topPx}px` }" />
-    <AdSlot rail :slot-key="rightKeys" class="pointer-events-auto absolute right-3 block" :style="{ top: `${topPx}px` }" />
+    <AdSlot rail rail-align="left" :slot-key="leftKeys" class="pointer-events-auto absolute left-3 block" :style="{ top: `${topPx}px` }" />
+    <AdSlot rail rail-align="right" :slot-key="rightKeys" class="pointer-events-auto absolute right-3 block" :style="{ top: `${topPx}px` }" />
   </div>
 </template>

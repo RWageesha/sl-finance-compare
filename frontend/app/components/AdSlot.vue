@@ -24,17 +24,22 @@ import type { SiteAd } from '~/composables/useSiteContent'
 // pooled together before the one weighted pick below, so a page-specific
 // ad and a site-wide one can compete for the same physical rail.
 //
-// rail: true for fixed-position side rails, where a wide ad (e.g. a
-// 300px Half Page) needs a wider viewport than a narrow one (120px
+// rail: true for fixed-position side rails. A wide ad (e.g. a 300px
+// Half Page) needs more gutter space than a narrow one (120px
 // Skyscraper) to clear the page's own content column without
-// overlapping it — checked per the ad actually chosen, not a fixed
-// breakpoint, since which ad wins the weighted pick can vary. Non-rail
-// (horizontal banner) placements instead just shrink responsively via
-// aspect-ratio, since there's no side content to overlap.
-const props = withDefaults(defineProps<{ slotKey: string | string[]; rail?: boolean; railOffset?: number }>(), {
-  rail: false,
-  railOffset: 12
-})
+// overlapping it — rather than hiding whenever the exact gutter doesn't
+// fit, the rail scales itself DOWN to whatever gutter space actually
+// exists (same idea as a horizontal banner's aspect-ratio shrink), so a
+// Half Page ad still shows — smaller — on a 1536px laptop instead of
+// vanishing until the visitor zooms out. It only hides outright once
+// there's no meaningful gutter left at all (checked per the ad actually
+// chosen, not a fixed breakpoint, since which ad wins the weighted pick
+// can vary). railAlign tells it which corner to shrink away from, so it
+// always retreats from the content edge, never the screen edge.
+const props = withDefaults(
+  defineProps<{ slotKey: string | string[]; rail?: boolean; railOffset?: number; railAlign?: 'left' | 'right' }>(),
+  { rail: false, railOffset: 12, railAlign: 'left' }
+)
 
 const { fetchAds } = useSiteContent()
 const ad = ref<SiteAd | null>(null)
@@ -69,12 +74,17 @@ const resolvedSize = computed(() => {
   return { w, h }
 })
 
-const fitsViewport = ref(true)
+// Below this many px of actual gutter, even a scaled-down rail would be
+// an illegible sliver — hide instead, same as the old hard cutoff did
+// for every size once the viewport got narrow enough (e.g. tablet/mobile).
+const MIN_RAIL_GUTTER = 30
+const railFit = ref({ show: true, scale: 1 })
 function checkFit() {
   if (!props.rail) return
   const { w } = resolvedSize.value
-  const needed = 1200 + 2 * (w + props.railOffset)
-  fitsViewport.value = window.innerWidth >= needed
+  const contentColumn = 1200
+  const gutter = (window.innerWidth - contentColumn) / 2 - props.railOffset
+  railFit.value = gutter < MIN_RAIL_GUTTER ? { show: false, scale: 1 } : { show: true, scale: Math.min(1, gutter / w) }
 }
 let resizeTimer: ReturnType<typeof setTimeout> | null = null
 function onResize() {
@@ -106,12 +116,16 @@ onUnmounted(() => {
 
 const gapPx = computed(() => Number(ad.value?.settings?.gap_px) || 12)
 const activeCreative = computed(() => ad.value?.creatives[current.value] ?? null)
-const shouldShow = computed(() => !!ad.value && (!props.rail || fitsViewport.value))
+const shouldShow = computed(() => !!ad.value && (!props.rail || railFit.value.show))
 const sizeStyle = computed(() => {
   const { w, h } = resolvedSize.value
-  return props.rail
-    ? { width: `${w}px`, height: `${h}px` }
-    : { width: '100%', maxWidth: `${w}px`, aspectRatio: `${w} / ${h}` }
+  if (!props.rail) return { width: '100%', maxWidth: `${w}px`, aspectRatio: `${w} / ${h}` }
+  return {
+    width: `${w}px`,
+    height: `${h}px`,
+    transform: railFit.value.scale < 1 ? `scale(${railFit.value.scale})` : undefined,
+    transformOrigin: props.railAlign === 'right' ? 'top right' : 'top left'
+  }
 })
 </script>
 

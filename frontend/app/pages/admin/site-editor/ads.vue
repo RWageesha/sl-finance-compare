@@ -191,6 +191,13 @@ const saving = ref(false)
 const anyUploading = computed(() => W.items.some((it) => it.uploading))
 
 const isUrl = (s: string) => /^https?:\/\/[^\s.]+\.[^\s]+/i.test(s || '')
+// Most admins type a bare domain ("hrockdigital.com/...") and expect
+// that to just work, the way a browser address bar treats it — rather
+// than reject it, assume https:// once they move on from the field.
+function normalizeUrl(v: string): string {
+  const trimmed = (v || '').trim()
+  return !trimmed || /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+}
 
 function openAdd() {
   Object.assign(W, blankWizard())
@@ -622,12 +629,12 @@ async function confirmDelete() {
               <img v-if="it.src && W.style !== 'video'" :src="it.src" alt="" class="mt-2 max-h-28 rounded border border-dashed border-card-border object-contain">
               <video v-if="it.src && W.style === 'video'" :src="it.src" class="mt-2 max-h-28 w-full rounded border border-dashed border-card-border" muted controls />
               <div class="mt-2 grid grid-cols-2 gap-2.5">
-                <div><label class="mb-0.5 block text-[11px] font-semibold text-navy">Target URL</label><input v-model="it.url" type="url" placeholder="https://..." class="w-full rounded-lg border border-card-border px-3 py-1.5 text-sm"></div>
+                <div><label class="mb-0.5 block text-[11px] font-semibold text-navy">Target URL</label><input v-model="it.url" type="url" placeholder="https://..." class="w-full rounded-lg border border-card-border px-3 py-1.5 text-sm" @blur="it.url = normalizeUrl(it.url)"></div>
                 <div><label class="mb-0.5 block text-[11px] font-semibold text-navy">Alt text</label><input v-model="it.alt" type="text" placeholder="Screen-reader description" class="w-full rounded-lg border border-card-border px-3 py-1.5 text-sm"></div>
               </div>
               <div v-if="W.style === 'video'" class="mt-2">
                 <label class="mb-0.5 block text-[11px] font-semibold text-navy">Poster image URL (shown before the video loads)</label>
-                <input v-model="it.poster" type="url" placeholder="https://..." class="w-full rounded-lg border border-card-border px-3 py-1.5 text-sm">
+                <input v-model="it.poster" type="url" placeholder="https://..." class="w-full rounded-lg border border-card-border px-3 py-1.5 text-sm" @blur="it.poster = normalizeUrl(it.poster)">
               </div>
             </div>
             <button v-if="STYLES[W.style].max > 1 && W.items.length < STYLES[W.style].max" type="button" class="self-start rounded-lg border border-card-border px-3 py-1.5 text-xs font-bold text-navy" @click="addItem">
